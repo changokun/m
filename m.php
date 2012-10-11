@@ -1,5 +1,6 @@
 <?php
 //dev version no changes please
+// is this change okay?
 class m {
   function __construct() {
     die('what are you doing?');
@@ -11,7 +12,7 @@ class m {
       if(strlen($label)) $label = array($label); else $label = array();
 
 	  $meta_info = self::get_caller('m::Dump’d', $relevant_backtrace_depth);
-	  
+
       $data_type = gettype($dumpee);
 
       switch($data_type) {
@@ -244,14 +245,14 @@ class m {
 	  foreach(func_get_args() as $arg) m::dump($arg, '<span style="color:crimson">death rattle</span>', 2);
 	  die('<hr>' . self::get_caller('Died', 1));
   }
-  
+
   static function get_caller($return = '', $relevant_backtrace_depth = 0) {
   	  // $return is the verb you want... as in 'dumped'
       $debug_info = debug_backtrace();
-      
+
       // is there a class?
       $class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[$relevant_backtrace_depth + 1]['class'] . '::' : '';
-      
+
       $return .= ' on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
       if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= ' in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()';
       // clean up slashes, remove core dir info
@@ -259,7 +260,7 @@ class m {
       // clean up more core info that doc root doesn't cover
       $return = str_replace('C:\www', '', str_replace('/', '\\', $return));
       $return = str_replace('/usr/www', '', str_replace('/', '\\', $return));
-      
+
       return $return;
   }
 
