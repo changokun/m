@@ -1,6 +1,7 @@
 <?php
 //dev version no changes please
 // is this change okay?
+// how about this one?
 class m {
   function __construct() {
     die('what are you doing?');
