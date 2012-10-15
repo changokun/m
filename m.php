@@ -6,17 +6,43 @@
 class m {
 
 	static public $developer_email = '';
+	static public $object_email = '';
+	static public $object_email_domain = '';
+	static private $instance;
+	static private $is_live = true; // play it safe.
+	static protected $default_death_message = '<p>Sorry, something went wrong. Our technicians have been notified. Please try again later.</p>';
+	static protected $functions_that_can_get_hot_output = array('aMail'); // be careful adding to this.
+	static protected $dump_these_vars_for_still_in_use = array('_REQUEST', '_SERVER', 'user');
 
 	function __construct() {
-		die('what are you doing?');
+		// anything to do here?
+	}
+
+	private static function init() {
+		// if this is a dev server or is in dev mode, load a fully functioning tool other wise a silent logger/monitor.
+		// so... load some config first.
+		if(isset($_SERVER['is_dev'])) self::$is_live = ! (bool) $_SERVER['is_dev'];
+
+		if(self::$is_live) {
+			// instantiate the cold version of the stuff (which is this class, unchanged.)
+			self::$instance = new m_live();
+		} else {
+			// instantiate the hot stuff
+			self::$instance = new m();
+		}
 	}
 
 	static function dump($dumpee, $label = 'no label provided', $relevant_backtrace_depth = 0) {
+		if( ! isset(self::$instance)) self::init();
+		self::$instance->do_dump($dumpee, $label, $relevant_backtrace_depth);
+	}
+
+	protected function do_dump($dumpee, $label = 'no label provided', $relevant_backtrace_depth = 0) {
 		static $vDump_display_count = 0;
 		$vDump_display_count ++;
 		if(strlen($label)) $label = array($label); else $label = array();
 
-		$meta_info = self::get_caller('m::Dump’d', $relevant_backtrace_depth);
+		$meta_info = self::get_caller('m::Dump’d', ++$relevant_backtrace_depth);
 
 		$data_type = gettype($dumpee);
 
@@ -257,15 +283,22 @@ class m {
 
 	static function death() {
 		foreach(func_get_args() as $arg) m::dump($arg, '<span style="color:crimson">death rattle</span>', 2);
-		die('<hr>' . self::get_caller('Died', 1));
+		if(self::$is_live) {
+			ob_clean();
+			die(self::$default_death_message);
+		} else {
+			die('<hr>' . self::get_caller('Died', 1));
+		}
 	}
 
 	static function get_caller($return = '', $relevant_backtrace_depth = 0) {
 		// $return is the verb you want... as in 'dumped'
 		$debug_info = debug_backtrace();
 
+		// is $relevant_backtrace_depth too deep?
+		if($relevant_backtrace_depth > (count($debug_info) -1)) $relevant_backtrace_depth = count($debug_info) -1;
 		// is there a class?
-		$class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[$relevant_backtrace_depth + 1]['class'] . '::' : '';
+		$class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[++$relevant_backtrace_depth]['class'] . '::' : '';
 
 		$return .= ' on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
 		if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= ' in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()';
@@ -325,24 +358,74 @@ class m {
 		}
 	}
 
-	static function is_this_still_in_use($msg) {
-		//m::is_this_still_in_use(); // 2012 08 02 ab
-		$headers = "Content-type: text/html; charset=utf-8\r\n";
-		$subject = "STILL IN USE: $msg";
-		if(is_bot()) $subject .= ' [bot]';
-		ob_start(); 
-		global $user; 
-		var_dump($user, $_REQUEST, $_SERVER); 
-		$body = ob_get_clean();
-		if(isset($_SERVER['is_dev']) and $_SERVER['is_dev']) {
-			var_dump($body, $subject);
-			var_dump(debug_backtrace());
-			die('this is still in use.');
+	static function is_this_still_in_use($msg = '') {
+		//m::is_this_still_in_use('old account password change code block'); // 2012 08 02 ab
+		if( ! isset(self::$instance)) self::init();
+
+		if(isset(self::$dump_these_vars_for_still_in_use)) {
+			ob_start();
+			foreach(self::$dump_these_vars_for_still_in_use as $var_name) {
+				echo '<h4>$' . $var_name . '</h4>';
+				switch($var_name) {
+					case '_SERVER':
+						echo '<xmp>'; var_dump($_SERVER); echo '</xmp>';
+					break;
+					case '_REQUEST':
+						echo '<xmp>'; var_dump($_REQUEST); echo '</xmp>';
+					break;
+					default:
+						// assumed to be a global
+						if(isset($GLOBALS[$var_name])) {
+							echo '<h4>$' . $var_name . '</h4>';
+							echo '<xmp>'; var_dump($GLOBALS[$var_name]); echo '</xmp>';
+						} else {
+							echo "<p>\$GLOBALS['" . $var_name . "'] not found.</p>";
+						}
+					break;
+				}
+				echo '</xmp>';
+			}
+			$body = ob_get_clean();
 		} else {
+			$body = '<p>No data to report.</p>';
+		}
+
+		// get caller info and append to msg.
+		$msg .= ' | ' . self::get_caller('complained', 1);
+
+		// send an email on live, or just die on dev.
+		if(self::$is_live) {
+			$headers = "Content-type: text/html; charset=utf-8\r\n";
+			$subject = "STILL IN USE: $msg";
+			if(self::is_bot()) $subject .= ' [bot]';
 			mail(self::$developer_email, $subject, $body, $headers);
+		} else {
+			die('<hr><h3>' . __FUNCTION__ . '() says: ' . $msg . '</h3>' . $body);
 		}
 	}
 
+	protected function is_bot() {
+		return false; // todo
+	}
 
 }
  
+
+
+class m_live extends m {
+
+	protected function do_dump($dumpee, $label = 'no label provided', $relevant_backtrace_depth = 0) {
+		// well, what if this is being used to create monitor output?
+		// how do we tell it to do dev dump? could check the backtrace, look for autorized functions, like aMail or log_something().
+		// that sounds safest.
+		foreach(debug_backtrace() as $track) {
+			if(in_array($track['function'], self::$functions_that_can_get_hot_output)) {
+				return parent::do_dump($dumpee, $label . ' [hot function]', $relevant_backtrace_depth + 4);
+			}
+		}
+
+		echo "<!-- live dump returns no output. -->";
+
+	}
+
+}
