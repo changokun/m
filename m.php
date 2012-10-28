@@ -10,7 +10,7 @@ class m {
       $vDump_display_count ++;
       if(strlen($label)) $label = array($label); else $label = array();
 
-	  $meta_info = self::get_caller('m::Dump’d', $relevant_backtrace_depth);
+	  $meta_info = self::get_caller('m::Dump’d', ++$relevant_backtrace_depth);
 	  
       $data_type = gettype($dumpee);
 
@@ -209,17 +209,24 @@ class m {
               asort($keys);
               if($missive) array_push($keys, 'missive');
               ?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="vDump_depth_twistee_control"></span><br><?endif;?>
-                  <? foreach($keys as $key): ?>
-                      <div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?=self::_dump($dumpee->$key, $depth, $key) ?></div>
-                  <? endforeach; ?>
-                  <? if(get_class($dumpee) != 'stdClass') :
-                      $methods = get_class_methods(get_class($dumpee)); ?>
-                      <div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;" class="depth_<?=$depth?>"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='vDump_twistee_control'></span>
-                          <? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="vDump_twistee_zone">'; foreach($methods as $method_name): ?>
-                              <li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
-                          <? endforeach; echo '</ul>'; ?>
-                      </div>
-                  <? endif; ?>
+              		<? switch(get_class($dumpee)) {
+              			case 'mysqli_result':
+              				?>cannot be dumped, but the technology exists. you should do it.<?
+              			break;
+              			default:
+			              foreach($keys as $key): ?>
+			                  <div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?=self::_dump($dumpee->$key, $depth, $key) ?></div>
+			              <? endforeach; ?>
+			              <? if(get_class($dumpee) != 'stdClass') :
+			                  $methods = get_class_methods(get_class($dumpee)); ?>
+			                  <div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;" class="depth_<?=$depth?>"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='vDump_twistee_control'></span>
+			                      <? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="vDump_twistee_zone">'; foreach($methods as $method_name): ?>
+			                          <li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
+			                      <? endforeach; echo '</ul>'; ?>
+			                  </div>
+			              <? endif;
+              			break;
+              		} // end switch ?>
               </span><?
           break;
           case 'xxx':
@@ -249,10 +256,13 @@ class m {
   	  // $return is the verb you want... as in 'dumped'
       $debug_info = debug_backtrace();
       
+      if($relevant_backtrace_depth > count($debug_info)) $relevant_backtrace_depth = count($debug_info);
+      
       // is there a class?
       $class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[$relevant_backtrace_depth + 1]['class'] . '::' : '';
       
-      $return .= ' on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
+      // depending on the source of an error, the backtrace depth may not be an array of stacks, it can be the stack.
+      if(isset($debug_info[$relevant_backtrace_depth]['line']) and isset($debug_info[$relevant_backtrace_depth]['file'])) $return .= ' on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
       if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= ' in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()';
       // clean up slashes, remove core dir info
       $return = str_replace($_SERVER['DOCUMENT_ROOT'], '', str_replace('/', '\\', $return));
