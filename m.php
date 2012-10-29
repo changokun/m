@@ -10,9 +10,9 @@ class m {
 	static private $is_live = true; // play it safe.
 	static protected $functions_that_can_get_hot_output = array('aMail'); // be careful adding to this.
 	static protected $dump_these_vars_for_still_in_use = array('_REQUEST', '_SERVER', 'user');
-  static $sensitive_folders = array('C:\www', '/usr/www'); // will attempt to scrub these from output
+	static $sensitive_folders = array('C:\www', '/usr/www'); // will attempt to scrub these from output
 
-	function __construct() {
+	private function __construct() {
 		// anything to do here?
 	}
 
@@ -30,174 +30,200 @@ class m {
 		}
 	}
 
-	static function dump($dumpee, $label = 'no label provided', $relevant_backtrace_depth = 0) {
+	public static function dump($dumpee, $label = 'no label provided', $options = array()) {
 		if( ! isset(self::$instance)) self::init();
-		self::$instance->do_dump($dumpee, $label, $relevant_backtrace_depth);
+		if( ! isset($options['founder'])) {
+			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on ';
+			if( ! isset($options['relevant_backtrace_depth'])) $options['relevant_backtrace_depth'] = 0;
+			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['relevant_backtrace_depth']);
+		}
+		self::$instance->do_dump($dumpee, $label, $options['founder']);
 	}
 
-	protected function do_dump($dumpee, $label = 'no label provided', $relevant_backtrace_depth = 0) {
-    if(self::$is_live) {
-      // send an email to the devs to let them know that their production dump has arrived.
-      // but of course, out put nothing.
+	protected static function get_stack_frame($relevant_backtrace_depth = 0) {
+		$debug_info = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		array_shift($debug_info); // lose the function that called me.
 
-    } else { // dev! hit it!
-      static $vDump_display_count = 0;
-      $vDump_display_count ++;
-      if(strlen($label)) $label = array($label); else $label = array();
+		// if $relevant_backtrace_depth is a string, it is actually a function name. go through the output and look for it.
+		if(is_string($relevant_backtrace_depth) and strlen($relevant_backtrace_depth)) {
+			$new_depth = 0;
+			foreach($debug_info as $depth => $frame) {
+				if(isset($frame['function']) and $frame['function'] == $relevant_backtrace_depth) {
+					$new_depth = $depth;
+					break;
+				}
+			}
+			$relevant_backtrace_depth = $new_depth;
+		}
 
-	  $meta_info = self::get_caller('m::Dump’d', ++$relevant_backtrace_depth);
-	  
-      $data_type = gettype($dumpee);
+		return $debug_info[$relevant_backtrace_depth];
 
-        switch($data_type) {
-            case 'string':
-                $label[] = '<span title="' . number_format(strlen($dumpee)) . ' character' . (strlen($dumpee) != 1 ? 's' : '') . '" >' . $data_type . '</span>';
-            break;
-            case 'boolean':
-                array_unshift($label, $dumpee ? '<span class="boolean_true_value">true</span>' : '<span class="boolean_false_value">false</span>');
-            break;
-            case 'object':
-              if($label[0] == 'no label provided') {
-                if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
-                elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
-              }
-                $label[] = $data_type;
-                $label[] = get_class($dumpee);
-            break;
-            default:
-                $label[] = $data_type;
-            break;
-        }
+	}
 
-      // for the simple types, output the value in the label area.
-      $done = false; // will cause the function to go into the subfunction
-      switch($data_type) {
-        case 'string':
-          $trim_length = 100;
-          if(strlen($dumpee) < $trim_length) $done = true;
-          array_unshift($label, substr($dumpee, 0, $trim_length) . (strlen($dumpee) > $trim_length ? '&nbsp;&hellip;' : ''));
-        break;
-        case 'double':
-          $done = true;
-          array_unshift($label, $dumpee);
-        break;
-        case 'integer':
-          $done = true;
-          array_unshift($label, number_format($dumpee, 0, '.', ','));
-        break;
-      }
+	protected function do_dump($dumpee, $label = 'no label provided', $meta_info) {
+		if(self::$is_live) {
+			// send an email to the devs to let them know that their production dump has arrived.
+			// but of course, out put nothing.
+
+		} else { // dev! hit it!
+			static $vDump_display_count = 0;
+			$vDump_display_count ++;
+			if(strlen($label)) $label = array($label); else $label = array();
+
+			$data_type = gettype($dumpee);
+
+			switch($data_type) {
+				case 'string':
+					$label[] = '<span title="' . number_format(strlen($dumpee)) . ' character' . (strlen($dumpee) != 1 ? 's' : '') . '" >' . $data_type . '</span>';
+				break;
+				case 'boolean':
+					array_unshift($label, $dumpee ? '<span class="boolean_true_value">true</span>' : '<span class="boolean_false_value">false</span>');
+				break;
+				case 'object':
+					if($label[0] == 'no label provided') {
+						if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
+						elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
+					}
+					$label[] = $data_type;
+					$label[] = get_class($dumpee);
+				break;
+				default:
+					$label[] = $data_type;
+				break;
+			}
+
+			// for the simple types, output the value in the label area.
+			$done = false; // will cause the function to go into the subfunction
+			switch($data_type) {
+				case 'string':
+					$trim_length = 100;
+					if(strlen($dumpee) < $trim_length) $done = true;
+					array_unshift($label, substr($dumpee, 0, $trim_length) . (strlen($dumpee) > $trim_length ? '&nbsp;&hellip;' : ''));
+				break;
+				case 'double':
+					$done = true;
+					array_unshift($label, $dumpee);
+				break;
+				case 'integer':
+					$done = true;
+					array_unshift($label, number_format($dumpee, 0, '.', ','));
+				break;
+			}
 
 
-      ?>
-          <div class="vDump">
-              <? if($label) : ?>
-                  <div style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px; " class = "vDump_label">
-                      <?=implode(' | ', $label)?>
-                  </div>
-              <? endif; ?>
-              <? if( ! $done) : ?>
-                  <div class="collapseybull"><?=self::_dump($dumpee, -1, $label)?></div>
-              <? endif; ?>
-              <div class="vDump_meta_info_main" style="font-size:9px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$meta_info?></div>
-          </div>
-      <? if($vDump_display_count == 1): // only for the first one.?>
-          <script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
-          <script>
-              if(typeof $ == 'function') {
-                  $(function() {
-                      $("div.vDump_label").add("div.vDump_meta_info_main").css('cursor', 'pointer').click(function() {
-                          $(this).parent().find('div.collapseybull').first().toggle(500);
-                      })
-                      $("div.collapseybull").hide(500);
-                      $(".vDump_depth_twistee_control").each(function(){
-                          parent = $(this).closest("[class^='depth_']");
-                          if(parent.length) {
-                              parent_depth = parseInt(parent.attr('class').substr(6));
-                              depth = parent_depth +1;
-                              zone = parent.find(".depth_" + depth);
-                              if(zone.length) {
-                                  if(zone.css('display') != 'none') {
-                                      // is shown. make the control a -
-                                      $(this).html('-');
-                                  } else {
-                                      /// hidden, make the control a +
-                                      $(this).html('+');
-                                  }
-                                  $(this).click(function(){
-                                      parent = $(this).closest("[class^='depth_']");
-                                      if(parent.length && typeof parent.attr('class') != 'undefined') {
-                                          parent_depth = parseInt(parent.attr('class').substr(6));
-                                          depth = parent_depth +1;
-                                          zone = parent.find(".depth_" + depth);
-                                          if(zone.css('display') != 'none') {
-                                              // is shown. make the control a -
-                                              $(this).html('+');
-                                          } else {
-                                              /// hidden, make the control a +
-                                              $(this).html('-');
-                                          }
-                                          zone.toggle(500);
-                                      }
-                                  });
-                              } else {
-                                  $(this).remove();
-                              }
-                          }
-                      });
-                      $(".vDump_twistee_control").each(function(){
-                          zone = $(this).parent().find(".vDump_twistee_zone");
-                          if(zone.length) {
-                              if(zone.css('display') != 'none') {
-                                  // is shown. make the control a -
-                                  $(this).html('-');
-                              } else {
-                                  /// hidden, make the control a +
-                                  $(this).html('+');
-                              }
+		?>
+		<div class="vDump">
+			<? if($label) : ?>
+				<div style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px; " class = "vDump_label">
+					<?=implode(' | ', $label)?>
+				</div>
+			<? endif; ?>
+			<? if( ! $done) : ?>
+				<div class="collapseybull"><?=self::_dump($dumpee, -1, $label)?></div>
+			<? endif; ?>
+			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$meta_info?></div>
+		</div>
+		<? if($vDump_display_count == 1): // only for the first one.?>
+			<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
+			<script>
+				if(typeof $ == 'function') {
+					$(function() {
+						$("div.vDump_label").add("div.vDump_meta_info_main").css('cursor', 'pointer').click(function() {
+							$(this).parent().find('div.collapseybull').first().toggle(500);
+						})
+						$("div.collapseybull").hide(500);
+						$(".vDump_depth_twistee_control").each(function(){
+							parent = $(this).closest("[class^='depth_']");
+							if(parent.length) {
+								parent_depth = parseInt(parent.attr('class').substr(6));
+								depth = parent_depth +1;
+								zone = parent.find(".depth_" + depth);
+								if(zone.length) {
+									if(zone.css('display') != 'none') {
+										// is shown. make the control a -
+										$(this).html('-');
+									} else {
+										/// hidden, make the control a +
+										$(this).html('+');
+									}
 
-                              $(this).click(function(){
-                                  zone = $(this).parent().find(".vDump_twistee_zone");
-                                  if(zone.css('display') != 'none') {
-                                      // is shown. make the control a -
-                                      $(this).html('+');
-                                  } else {
-                                      /// hidden, make the control a +
-                                      $(this).html('-');
-                                  }
-                                  zone.toggle(500);
-                              });
-                          } else {
-                              $(this).remove();
-                          }
-                      });
-                  });
-              }
-          </script>
-          <style>
-              div.vDump { border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0; }
-              div.vDump span div { padding:3px; margin:3px;}
-              div.vDump div div { margin-left:7px; }
-              div.vDump div div.depth_0 { margin-left:3px; }
-              div.depth_0 {background-color:#EEE;}
-              div.depth_1 {background-color:#DDD;}
-              div.depth_2 {background-color:#CCC;}
-              div.depth_3 {background-color:#BBB;}
-              .key { color: #444; }
-              .vDump_meta_info { color:#333 }
-              .vDump_meta_info_main { font-size:9px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
-              .string_value { color:olive }
-              .integer_value { color:magenta }
-              .float_value { color:purple }
-              .boolean_true_value { color:green }
-              .boolean_false_value { color:crimson }
-              .null_value { color:blue; text-transform:uppercase}
-              .vDump_depth_twistee_control, .vDump_twistee_control {margin:0 5px; cursor:pointer;}
-              .note { color:#666; font-size:12px;}
-          </style>
-      <? endif;
+									$(this).click(function(){
+										parent = $(this).closest("[class^='depth_']");
+										if(parent.length && typeof parent.attr('class') != 'undefined') {
+											parent_depth = parseInt(parent.attr('class').substr(6));
+											depth = parent_depth +1;
+											zone = parent.find(".depth_" + depth);
+											if(zone.css('display') != 'none') {
+												// is shown. make the control a -
+												$(this).html('+');
+											} else {
+												/// hidden, make the control a +
+												$(this).html('-');
+											}
+											zone.toggle(500);
+										}
+									});
 
-  	  }
-  }
+								} else {
+									$(this).remove();
+								}
+							}
+						});
+						$(".vDump_twistee_control").each(function(){
+							zone = $(this).parent().find(".vDump_twistee_zone");
+							if(zone.length) {
+								if(zone.css('display') != 'none') {
+									// is shown. make the control a -
+									$(this).html('-');
+								} else {
+									/// hidden, make the control a +
+									$(this).html('+');
+								}
+
+								$(this).click(function(){
+									zone = $(this).parent().find(".vDump_twistee_zone");
+									if(zone.css('display') != 'none') {
+										// is shown. make the control a -
+										$(this).html('+');
+									} else {
+										/// hidden, make the control a +
+										$(this).html('-');
+									}
+									zone.toggle(500);
+								});
+
+							} else {
+								$(this).remove();
+							}
+						});
+					});
+				}
+			</script>
+			<style>
+				div.vDump { border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0; }
+				div.vDump span div { padding:3px; margin:3px;}
+				div.vDump div div { margin-left:7px; }
+				div.vDump div div.depth_0 { margin-left:3px; }
+				div.depth_0 {background-color:#EEE;}
+				div.depth_1 {background-color:#DDD;}
+				div.depth_2 {background-color:#CCC;}
+				div.depth_3 {background-color:#BBB;}
+				.key { color: #444; }
+				.vDump_meta_info { color:#333 }
+				.vDump_meta_info_main { font-size:9px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
+				.string_value { color:olive }
+				.integer_value { color:magenta }
+				.float_value { color:purple }
+				.boolean_true_value { color:green }
+				.boolean_false_value { color:crimson }
+				.null_value { color:blue; text-transform:uppercase}
+				.vDump_depth_twistee_control, .vDump_twistee_control {margin:0 5px; cursor:pointer;}
+				.note { color:#666; font-size:12px;}
+			</style>
+		<? endif;
+
+		}
+	}
 
 
 
@@ -269,12 +295,12 @@ class m {
 			break;
 
 			case 'xxx':
-			    ?>
-			    <xmp style="font-size:12px; font-family:Arial; padding:5px;"><?var_dump($dumpee);?></xmp>
+							?>
+							<xmp style="font-size:12px; font-family:Arial; padding:5px;"><?var_dump($dumpee);?></xmp>
 			<? break;
 
 			default: ?>
-			    <h1>What do i do with a <?=$data_type?></h1>
+							<h1>What do i do with a <?=$data_type?></h1>
 			<? break;
 		}
 
@@ -287,43 +313,67 @@ class m {
 		}
 	}
 
-  /**
-  * death dumps all its arguments then stops execution.
-  * if in live mode, it throws an exception, which should be properly handled by your code.
-  *
-  */
+		/**
+		* death dumps all its arguments then stops execution.
+		* if in live mode, it throws an exception, which should be properly handled by your code.
+		*
+		*/
 	static function death() {
+		if( ! isset(self::$instance)) self::init();
 		if(self::$is_live) {
 			ob_clean();
-      // dump the args, which means that emails will be sent. todo
+			// dump the args, which means that emails will be sent. todo
 
-      // throw an Exception. please consider writing your own exception handler.
-      //throw new Exception('m-death');
-    } else {
-      foreach(func_get_args() as $arg) m::dump($arg, '<span style="color:crimson">death rattle</span>', 2);
-			die('<!-- cause of death ' . self::get_caller_fragment(1) . ' -->');
+			// throw an Exception. please consider writing your own exception handler.
+			throw new Exception('m-death');
+		} else {
+			// in the case of a death, the relevant backtrace depth is always 1
+			$founder = 'Cause of death on ' . self::get_caller_fragment();
+			$args = func_get_args();
+			if(count($args == 1)) $args[] = 'death rattle';
+			if(isset($args[1]) and ! is_scalar($args[1])) $args[1] = 'second argument for death must be scalar.';
+			if(count($args) > 1) {
+				m::dump($args[0], '<span style="color:crimson">' . $args[1] . '</span>', array('founder' => $founder));
+				die('<!-- ' . $founder . ' -->');
+			} else {
+				die('<hr />' . $founder);
+			}
 		}
 	}
 
-  /**
-  * produces ' on line 123 of file /xyz' without revealing doc root.
-  *
-  * @param int $relevant_backtrace_depth
-  */
+		/**
+		* produces ' on line 123 of file /xyz' without revealing doc root.
+		*
+		* @param int $relevant_backtrace_depth
+		*/
 	static function get_caller_fragment($relevant_backtrace_depth = 0) {
 		$debug_info = debug_backtrace();
 
+		// if $relevant_backtrace_depth is a string, it is actually a function name. go through the output and look for it.
+		if(is_string($relevant_backtrace_depth) and strlen($relevant_backtrace_depth)) {
+			$new_depth = 0;
+			foreach($debug_info as $depth => $stack) {
+				if(isset($stack['function']) and $stack['function'] == $relevant_backtrace_depth) {
+					$new_depth = --$depth;
+					break;
+				}
+			}
+
+			$relevant_backtrace_depth = $new_depth;
+
 		// is $relevant_backtrace_depth too deep?
-		if($relevant_backtrace_depth > (count($debug_info) -1)) $relevant_backtrace_depth = count($debug_info) -1;
+		} elseif($relevant_backtrace_depth > (count($debug_info) -1)) $relevant_backtrace_depth = count($debug_info) -1;
+
 		// is there a class?
 		$class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[++$relevant_backtrace_depth]['class'] . '::' : '';
 
-		$return .= 'on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
-		if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= ' in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()';
+		$return = 'on line ' . $debug_info[$relevant_backtrace_depth]['line'] . ' of ' . $debug_info[$relevant_backtrace_depth]['file'];
 		// clean up slashes, remove core dir info
 		$return = str_replace($_SERVER['DOCUMENT_ROOT'], '', str_replace('/', '\\', $return));
 		// clean up more core info that doc root doesn't cover - because sometime your libs will use this and they aren't in doc root.
-    foreach(self::$sensitive_folders as $folder) $return = str_replace(str_replace('/', '\\', $folder), '', str_replace('/', '\\', $return));
+		foreach(self::$sensitive_folders as $folder) $return = str_replace(str_replace('/', '\\', $folder), '', str_replace('/', '\\', $return));
+
+		if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= '<span style="color:#888"> in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()</span>';
 
 		return $return;
 	}
