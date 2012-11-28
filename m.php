@@ -16,6 +16,17 @@ class m {
 		// anything to do here?
 	}
 
+	// here's the pattern:
+	public static function screw() { // function with nice name that you use in your code.
+		if( ! isset(self::$instance)) self::init(); // get the instance
+		self::$instance->do_screw($pass_your_args_here); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
+		// now go find both function definitions.
+	}
+
+	protected function do_screw() {
+		// this is the dev version of the function. do what ever you want.
+	}
+
 	private static function init() {
 		// if this is a dev server or is in dev mode, load a fully functioning tool otherwise a silent logger/monitor.
 		// so... load some config first.
@@ -30,14 +41,32 @@ class m {
 		}
 	}
 
+	/**
+	* dump stuff. click the black bar to expand when the data is complex. you can set options that include founder verb, relevant backtrace depth, etc.
+	*
+	* @param mixed $dumpee the thing you want dumpd
+	* @param string $label the most visible part of the dump
+	* @param array $options see code for all options
+	*/
 	public static function dump($dumpee, $label = 'no label provided', $options = array()) {
+		// temp for debug usage:
+		if( ! is_array($options)) {
+			if(is_numeric($options)) {
+				$options = array('relevant_backtrace_depth' => $options);
+			} else {
+				m::death(debug_backtrace());
+			}
+		}
 		if( ! isset(self::$instance)) self::init();
 		if( ! isset($options['founder'])) {
 			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on ';
 			if( ! isset($options['relevant_backtrace_depth'])) $options['relevant_backtrace_depth'] = 0;
 			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['relevant_backtrace_depth']);
 		}
-		self::$instance->do_dump($dumpee, $label, $options['founder']);
+		// collapse? expand?
+		if( ! isset($options['collapse'])) $options['collapse'] = true;
+
+		self::$instance->do_dump($dumpee, $label, $options);
 	}
 
 	protected static function get_stack_frame($relevant_backtrace_depth = 0) {
@@ -60,12 +89,8 @@ class m {
 
 	}
 
-	protected function do_dump($dumpee, $label = 'no label provided', $meta_info) {
-		if(self::$is_live) {
-			// send an email to the devs to let them know that their production dump has arrived.
-			// but of course, out put nothing.
+	protected function do_dump($dumpee, $label = 'no label provided', $options = array()) {
 
-		} else { // dev! hit it!
 			static $vDump_display_count = 0;
 			$vDump_display_count ++;
 			if(is_scalar($label)) $label = array($label); else $label = array();
@@ -119,19 +144,20 @@ class m {
 				</div>
 			<? endif; ?>
 			<? if( ! $done) : ?>
-				<div class="collapseybull"><?=self::_dump($dumpee, -1, $label)?></div>
+				<div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1, $label)?></div>
 			<? endif; ?>
-			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$meta_info?></div>
+			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
 		</div>
 		<? if($vDump_display_count == 1): // only for the first one.?>
-			<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
+			<!--<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>-->
+			<script type='text/javascript' src='http://assets.sarumino.dev/lib/js/jQuery/jquery.min.js'></script>
 			<script>
 				if(typeof $ == 'function') {
 					$(function() {
 						$("div.vDump_label").add("div.vDump_meta_info_main").css('cursor', 'pointer').click(function() {
 							$(this).parent().find('div.collapseybull').first().toggle(500);
 						})
-						$("div.collapseybull").hide(500);
+						$("div.collapseybull_on_init").hide(500);
 						$(".vDump_depth_twistee_control").each(function(){
 							parent = $(this).closest("[class^='depth_']");
 							if(parent.length) {
@@ -223,7 +249,6 @@ class m {
 		<? endif;
 
 		}
-	}
 
 
 
@@ -261,6 +286,7 @@ class m {
 				if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
 				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 				<? foreach($dumpee as $key => $value): ?>
+					<? if(is_string($value) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $value = 'JA JA JA'; ?>
 					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?= self::_dump($value, $depth, $key) ?></div>
 				<? endforeach; ?>
 				</span><?
@@ -280,6 +306,7 @@ class m {
 				if($missive) array_push($keys, 'missive');
 				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="vDump_depth_twistee_control"></span><br><?endif;?>
 					<? foreach($keys as $key): ?>
+						<? if(is_string($dumpee->$key) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $dumpee->$key = 'JA JA JA'; ?>
 						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?=self::_dump($dumpee->$key, $depth, $key) ?></div>
 					<? endforeach; ?>
 					<? if(get_class($dumpee) != 'stdClass') :
@@ -310,34 +337,6 @@ class m {
 			case 'string':
 				if(is_numeric($dumpee) and (isset($parentKey) and is_string($parentKey) and (substr($parentKey, -5, 5) == '_date' or substr($parentKey, -4, 4) == 'Date' or substr($parentKey, -9, 9) == 'TimeStamp' or substr($parentKey, -10, 10) == '_timestamp')) or (strlen($dumpee) == 10)) echo date(' (l, F jS, Y \a\t h:i:s A)', (int) $dumpee);
 			break;
-		}
-	}
-
-		/**
-		* death dumps all its arguments then stops execution.
-		* if in live mode, it throws an exception, which should be properly handled by your code.
-		*
-		*/
-	static function death() {
-		if( ! isset(self::$instance)) self::init();
-		if(self::$is_live) {
-			ob_clean();
-			// dump the args, which means that emails will be sent. todo
-
-			// throw an Exception. please consider writing your own exception handler.
-			throw new Exception('m-death');
-		} else {
-			// in the case of a death, the relevant backtrace depth is always 1
-			$founder = 'Cause of death on ' . self::get_caller_fragment();
-			$args = func_get_args();
-			if(count($args == 1)) $args[] = 'death rattle';
-			if(isset($args[1]) and ! is_scalar($args[1])) $args[1] = 'second argument for death must be scalar.';
-			if(count($args) > 1) {
-				m::dump($args[0], '<span style="color:crimson">' . $args[1] . '</span>', array('founder' => $founder));
-				die('<!-- ' . $founder . ' -->');
-			} else {
-				die('<hr />' . $founder);
-			}
 		}
 	}
 
@@ -478,6 +477,161 @@ class m {
 		return false; // todo
 	}
 
+
+
+	// death section //////////////////////////////////////////////////////
+	/**
+	* death dumps all its arguments then stops execution.
+	* if in live mode, it throws an exception, which should be properly handled by your code.
+	*
+	*/
+	public static function death() { // function with nice name that you use in your code.
+		if( ! isset(self::$instance)) self::init(); // get the instance
+		self::$instance->do_death(func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
+		// now go find both function definitions.
+}
+
+	protected function do_death() {
+
+		// get any decho output
+		echo '<div style="border:2px solid tan">';
+		echo m::get_HTML_output();
+		echo '</div>';
+
+		// in the case of a death, the relevant backtrace depth is always 2
+		$founder = 'Cause of death on ' . self::get_caller_fragment(1);
+		$temp = func_get_args(); $args = array_pop($temp); // keep in mind how args are passed to this slave func
+		if(count($args == 1)) $args[] = 'death rattle';
+		if(isset($args[1]) and ! is_scalar($args[1])) $args[1] = 'second argument for death must be scalar.';
+		if(count($args) > 1) {
+			$this->dump($args[0], '<span style="color:crimson">' . $args[1] . '</span>', array('founder' => $founder, 'collapse' => false, 'relevant_backtrace_depth' => 3));
+			die('<!-- ' . $founder . ' -->');
+		} else {
+			die('<hr />' . $founder);
+		}
+	}
+
+
+
+
+	// help section ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/**
+	* checks if help is turned on for the area, and is of at least $depth
+	*
+	* @param string, array $area defaults to general
+	* @param int $depth def 1
+	*/
+	public static function help($area = 'general', $depth = 1) {
+		if( ! isset(self::$instance)) self::init(); // get the instance
+		self::$instance->do_help($area, $depth);
+	}
+
+	/**
+	* return boolean indicating whether or not help is enabled for the area, and at the $depth
+	*
+	*/
+	protected function do_help($area, $depth) { // defaults specified in pub func
+		// this is the dev version of the function. do what ever you want.
+		// has help been initted?
+		// i//f( ! isset(self::$helps)) $this->init_help();
+		if($value = persistence::get($area . 'Help', array('session', 'request'), false)) {
+			return $value >= $depth;
+		}
+	}
+
+	public static function turn_on_help($area = 'general', $depth = 1) {
+
+	}
+
+	public static function turn_off_help($area = 'all') {
+
+	}
+
+
+	// decho section ///////////////////////////////////////////////////////////////
+
+	// a decho is a dump that can have it's output collected and output on the side.
+
+	public static function decho() { // function with nice name that you use in your code.
+		if( ! isset(self::$instance)) self::init(); // get the instance
+		self::$instance->do_decho(func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
+		// now go find both function definitions.
+	}
+
+	protected function do_decho() {
+		$temp = func_get_args(); // mind you how args are passedin to this slave func
+		$args = array_pop($temp);
+
+		// pull out some behavior keywords
+		foreach($args as $key => $arg) {
+			if($arg == 'inline') {
+				$inline = true;
+				unset($args[$key]);
+				break;
+			}
+			if($arg == 'on the side' or $arg == 'on_the_side') {
+				$inline = false;
+				unset($args[$key]);
+				break;
+			}
+		}
+
+		ob_start();
+
+		if(count($args) == 1 and is_scalar($args[0])) {
+			// output simple string
+			echo $this->get_scalar_decho_HTML($args[0]);
+		} elseif(count($args) == 2 and is_scalar($args[1])) {
+			// same as a dump - dumpee and label have been provided.
+			$this->dump($args[0], $args[1], array('relevant_backtrace_depth' => 3));
+		} else {
+			$all_scalar = true;
+			foreach($args as $arg) if( ! is_scalar($arg)) $all_scalar = false;
+			if($all_scalar) {
+				foreach($args as $arg) echo $this->get_scalar_decho_HTML($arg);
+			} else {
+				foreach($args as $arg) $this->dump($arg, 'decho', array('relevant_backtrace_depth' => 3));
+			}
+		}
+
+		$output = ob_get_clean();
+
+		// now, the big question... inline? or on the side?
+		// if it was not set by args. default to 'on the side' unless emergencyHelp is on.
+		// rather than call the help method and risk a loop, i'll do a manual check for emergency Help
+		if( ! isset($inline)) $inline = isset($_REQUEST['emergencyHelp']);
+		if($inline) {
+			echo $output;
+		} else {
+			$this->side_dish .= $output;
+		}
+
+		//m::dump($args, 'decho!!!', array('relevant_backtrace_depth' => 2));
+		// if there is one arg, and it is scalar, let's do a simple output. if it is more complex, auto-dump.
+		// this is the dev version of the function. do what ever you want.
+	}
+
+	protected function get_scalar_decho_HTML($str) {
+		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags($this->get_caller_fragment(2)) . '">' . $str . '</div>';
+	}
+
+
+
+	// output section ////////////////////////////////////////////////
+	public static function get_HTML_output() { // function with nice name that you use in your code.
+		// this is a case where you don't want to instantiate if it doesn't already exist.
+		if( ! isset(self::$instance)) return NULL;
+		return self::$instance->do_get_HTML_output(); // depending on what is instantiated, this will run either m->do_get_HTML_output() or m_live->do_get_HTML_output()
+	}
+
+	protected function do_get_HTML_output() {
+		if(isset(self::$instance->side_dish)) return self::$instance->side_dish;
+		return NULL;
+	}
+
+
+
 }
 
 
@@ -497,5 +651,24 @@ class m_live extends m {
 		echo "<!-- live dump returns no output. -->";
 
 	}
+
+	protected function do_screw() {
+		// this is the live version of the function. do non-obtrusive things, like sending alert emails or logging;
+}
+
+	// help section //////////////////////////////////////////////////////////////////////////////
+	// does not matter, do nothing for helps on live. if you need some help output, get m to instantiate as dev.
+	protected function do_help($ignore, $ignore) {
+		// we do nothing live.
+		return false;
+	}
+
+	// decho section //////////////////////////////////////////////////////////////////////////////
+	// does not matter, do nothing for dechoes on live. if you need some decho output, get m to instantiate as dev.
+	protected function do_decho() {
+		// we do nothing live.
+	}
+
+
 
 }
