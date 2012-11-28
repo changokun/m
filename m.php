@@ -68,7 +68,7 @@ class m {
 		} else { // dev! hit it!
 			static $vDump_display_count = 0;
 			$vDump_display_count ++;
-			if(strlen($label)) $label = array($label); else $label = array();
+			if(is_scalar($label)) $label = array($label); else $label = array();
 
 			$data_type = gettype($dumpee);
 
@@ -379,11 +379,10 @@ class m {
 	}
 
 	static function aMail() {
-		global $user;
 		$headers  = "From: aMailError_{$_SERVER['SERVER_NAME']}@placewise.com\r\n";
 		$headers .= "Content-type: text/html\r\n";
 		$debugInfo = debug_backtrace();
-		$subject = (isset($user->uid) and $user->uid) ? '' : 'anon ';
+		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon ';
 		$subject .= "error aMail() from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']);
 		$body = "<h3>aMail from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']) . "</h3>";
 		$body .= "<div style='border:1px solid olive; padding:5px; margin:5px;'>page requested: http://{$_SERVER['SERVER_NAME']}";
@@ -408,8 +407,12 @@ class m {
 			}
 		}
 		ob_start();
-		echo "<h1>\$user</h1>";
-		var_dump($user);
+		if(isset($GLOBALS['user'])) {
+			echo "<h1>\$user</h1>";
+			var_dump($GLOBALS['user']);
+		} else {
+			echo "<h1>no \$user instantiated</h1>";
+		}
 		echo "<h1>\$debugInfo</h1>";
 		var_dump($debugInfo);
 		/*echo "<h1>\$_SERVER</h1>";
@@ -418,7 +421,7 @@ class m {
 		var_dump($_REQUEST);
 		$body .= "<pre style='font-size:12px; font-family:Arial'>" . ob_get_clean() . "</pre>";
 		if(stripos($_SERVER['HTTP_USER_AGENT'], 'bot') !== false) $subject .= " [bot]";
-		if(bass_config::get('mf_machineName') == 'tlaloc' or (isset($user->uid) and $user->uid == 9)) {
+		if(bass_config::get('mf_machineName') == 'tlaloc' or (isset($GLOBALS['user']->uid) and $GLOBALS['user']->uid == 9)) {
 			echo '<div style="overflow:hidden; height:200px; border:6px solid wheat; padding:5px;">' . $body . '</div>';
 		} else {
 			@mail(self::$developer_email, $subject, $body, $headers);
