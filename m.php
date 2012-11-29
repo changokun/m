@@ -3,17 +3,23 @@
 // will need short_open_tag = On in your php.ini
 
 class m {
-	static public $developer_email = '';
-	static public $object_email = '';
-	static public $object_email_domain = '';
+	static public $developer_email;
+	static public $object_email;
+	static public $m_email_domain;
 	static private $instance;
 	static private $is_live = true; // play it safe.
 	static protected $functions_that_can_get_hot_output = array('aMail'); // be careful adding to this.
-	static protected $dump_these_vars_for_still_in_use = array('_REQUEST', '_SERVER', 'user');
-	static $sensitive_folders = array('C:\www', '/usr/www'); // will attempt to scrub these from output
+	static protected $dump_these_global_vars_for_still_in_use = array('_REQUEST', '_SERVER');
+	static protected $dump_these_global_vars_for_aMail = array('_REQUEST', '_SERVER');
+	static $sensitive_folders = array(); // will attempt to scrub these from output
+	static public $jQuery_src_url = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
 
 	private function __construct() {
-		// anything to do here?
+		if(file_exists(dirname(__FILE__) . '/m.ini')) {
+			foreach(parse_ini_file('m.ini', true) as $key => $value) {
+				self::$$key = $value;
+			}
+		}
 	}
 
 	// here's the pattern:
@@ -49,7 +55,7 @@ class m {
 	* @param array $options see code for all options
 	*/
 	public static function dump($dumpee, $label = 'no label provided', $options = array()) {
-		// temp for debug usage:
+		// temp for debug usage: todo delete next few lines
 		if( ! is_array($options)) {
 			if(is_numeric($options)) {
 				$options = array('relevant_backtrace_depth' => $options);
@@ -57,6 +63,7 @@ class m {
 				m::death(debug_backtrace());
 			}
 		}
+
 		if( ! isset(self::$instance)) self::init();
 		if( ! isset($options['founder'])) {
 			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on ';
@@ -91,8 +98,8 @@ class m {
 
 	protected function do_dump($dumpee, $label = 'no label provided', $options = array()) {
 
-			static $vDump_display_count = 0;
-			$vDump_display_count ++;
+			static $javascript_has_been_output = false;
+
 			if(is_scalar($label)) $label = array($label); else $label = array();
 
 			$data_type = gettype($dumpee);
@@ -148,10 +155,10 @@ class m {
 			<? endif; ?>
 			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
 		</div>
-		<? if($vDump_display_count == 1): // only for the first one.?>
-			<!--<script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>-->
-			<script type='text/javascript' src='http://assets.sarumino.dev/lib/js/jQuery/jquery.min.js'></script>
-			<script>
+		<? if( ! $javascript_has_been_output): // only for the first one.?>
+			<? $javascript_has_been_output = true; ?>
+			<script type="text/javascript" src="<?=self::$jQuery_src_url?>"></script>
+			<script type="text/javascript">
 				if(typeof $ == 'function') {
 					$(function() {
 						$("div.vDump_label").add("div.vDump_meta_info_main").css('cursor', 'pointer').click(function() {
@@ -250,8 +257,6 @@ class m {
 
 		}
 
-
-
 	static private function _dump($dumpee, $depth, $parentKey = '') {
 		static $separator = ' =&gt; ';
 		$depth ++;
@@ -321,13 +326,12 @@ class m {
 				</span><?
 			break;
 
-			case 'xxx':
-							?>
-							<xmp style="font-size:12px; font-family:Arial; padding:5px;"><?var_dump($dumpee);?></xmp>
+			case 'xxx': ?>
+				<xmp style="font-size:12px; font-family:Arial; padding:5px;"><?var_dump($dumpee);?></xmp>
 			<? break;
 
 			default: ?>
-							<h1>What do i do with a <?=$data_type?></h1>
+				<h3>What do i do with a <?=$data_type?></h3>
 			<? break;
 		}
 
@@ -340,11 +344,11 @@ class m {
 		}
 	}
 
-		/**
-		* produces ' on line 123 of file /xyz' without revealing doc root.
-		*
-		* @param int $relevant_backtrace_depth
-		*/
+	/**
+	* produces ' on line 123 of file /xyz' without revealing doc root.
+	*
+	* @param int $relevant_backtrace_depth
+	*/
 	static function get_caller_fragment($relevant_backtrace_depth = 0) {
 		$debug_info = debug_backtrace();
 
@@ -378,20 +382,20 @@ class m {
 	}
 
 	static function aMail() {
-		$headers  = "From: aMailError_{$_SERVER['SERVER_NAME']}@placewise.com\r\n";
+		$headers  = "From: aMail_{$_SERVER['SERVER_NAME']}@{self::$m_email_domain}\r\n";
 		$headers .= "Content-type: text/html\r\n";
 		$debugInfo = debug_backtrace();
-		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon ';
-		$subject .= "error aMail() from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']);
+		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon '; // todo - how to tell if anonymous
+		$subject .= "aMail() from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']); // todo formalize the path scrubbing
 		$body = "<h3>aMail from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']) . "</h3>";
-		$body .= "<div style='border:1px solid olive; padding:5px; margin:5px;'>page requested: http://{$_SERVER['SERVER_NAME']}";
+		$body .= '<div style="border:1px solid olive; padding:5px; margin:5px;">page requested: http://' . $_SERVER['SERVER_NAME'];
 		if(isset($_SERVER['REDIRECT_URL'])) $body .= $_SERVER['REDIRECT_URL']; // this should probably be some other ting.
 		if(isset($_SERVER['HTTP_REFERER']) and strlen($_SERVER['HTTP_REFERER'])) {
-			$body .= "<br>from {$_SERVER['HTTP_REFERER']}";
+			$body .= '<br>from ' . $_SERVER['HTTP_REFERER'];
 		} else {
-			$body .= "<br> no referer [sic].";
+			$body .= '<br> no referer [sic].';
 		}
-		$body .= "</div>";
+		$body .= '</div>';
 		$args = func_get_args();
 		foreach($args as $arg) { // first, put strings at top
 			if(is_scalar($arg)) {
@@ -405,21 +409,11 @@ class m {
 				$body .= "<pre style='font-size:12px; font-family:Arial'>" . ob_get_clean() . "</pre>";
 			}
 		}
-		ob_start();
-		if(isset($GLOBALS['user'])) {
-			echo "<h1>\$user</h1>";
-			var_dump($GLOBALS['user']);
-		} else {
-			echo "<h1>no \$user instantiated</h1>";
-		}
-		echo "<h1>\$debugInfo</h1>";
-		var_dump($debugInfo);
-		/*echo "<h1>\$_SERVER</h1>";
-		var_dump($_SERVER);*/
-		echo "<h1>\$_REQUEST</h1>";
-		var_dump($_REQUEST);
-		$body .= "<pre style='font-size:12px; font-family:Arial'>" . ob_get_clean() . "</pre>";
-		if(stripos($_SERVER['HTTP_USER_AGENT'], 'bot') !== false) $subject .= " [bot]";
+
+		// dump the configured global vars + debug info
+		$body .= self::get_global_dumps(self::$dump_these_global_vars_for_aMail, array('debug info' => $debugInfo));
+
+		if(stripos($_SERVER['HTTP_USER_AGENT'], 'bot') !== false) $subject .= " [bot]"; // todo update
 		if(bass_config::get('mf_machineName') == 'tlaloc' or (isset($GLOBALS['user']->uid) and $GLOBALS['user']->uid == 9)) {
 			echo '<div style="overflow:hidden; height:200px; border:6px solid wheat; padding:5px;">' . $body . '</div>';
 		} else {
@@ -431,32 +425,10 @@ class m {
 		//m::is_this_still_in_use('old account password change code block'); // 2012 08 02 ab
 		if( ! isset(self::$instance)) self::init();
 
-		if(isset(self::$dump_these_vars_for_still_in_use)) {
-			ob_start();
-			foreach(self::$dump_these_vars_for_still_in_use as $var_name) {
-				echo '<h4>$' . $var_name . '</h4>';
-				switch($var_name) {
-					case '_SERVER':
-						echo '<xmp>'; var_dump($_SERVER); echo '</xmp>';
-					break;
-					case '_REQUEST':
-						echo '<xmp>'; var_dump($_REQUEST); echo '</xmp>';
-					break;
-					default:
-						// assumed to be a global
-						if(isset($GLOBALS[$var_name])) {
-							echo '<h4>$' . $var_name . '</h4>';
-							echo '<xmp>'; var_dump($GLOBALS[$var_name]); echo '</xmp>';
-						} else {
-							echo "<p>\$GLOBALS['" . $var_name . "'] not found.</p>";
-						}
-					break;
-				}
-				echo '</xmp>';
-			}
-			$body = ob_get_clean();
+		if(count(self::$dump_these_global_vars_for_still_in_use)) {
+			$body = self::get_global_dumps(self::$dump_these_global_vars_for_still_in_use);
 		} else {
-			$body = '<p>No data to report.</p>';
+			$body = '<p>No data to report (if you would like to see some data, consider setting dump_these_global_vars_for_still_in_use in your m.ini).</p>';
 		}
 
 		// get caller info and append to msg.
@@ -471,6 +443,39 @@ class m {
 		} else {
 			die('<hr><h3>' . __FUNCTION__ . '() says: ' . $msg . '</h3>' . $body);
 		}
+	}
+
+	protected static function get_global_dumps($var_names, $additional_data = array()) {
+		// additional data is an assoc array (label, data) that is more things to be dumped in the same styles
+		static $label_tag_name = 'h4';
+		ob_start();
+		foreach($var_names as $var_name) {
+			echo "<$label_tag_name>\$$var_name</$label_tag_name>";
+			switch($var_name) {
+				case '_SERVER':
+					echo '<xmp>'; var_dump($_SERVER); echo '</xmp>';
+				break;
+				case '_REQUEST':
+					echo '<xmp>'; var_dump($_REQUEST); echo '</xmp>';
+				break;
+				default:
+					// assumed to be a global
+					if(isset($GLOBALS[$var_name])) {
+						echo '<xmp>'; var_dump($GLOBALS[$var_name]); echo '</xmp>';
+					} else {
+						echo "<p>\$GLOBALS['" . $var_name . "'] not found.</p>";
+					}
+				break;
+			}
+		}
+
+		foreach($additional_data as $label => $data) {
+			echo "<$label_tag_name>\$$var_name!!!</$label_tag_name>";
+			echo '<xmp>'; var_dump($data); echo '</xmp>';
+		}
+
+		$temp = ob_get_clean();
+		return $temp;
 	}
 
 	protected function is_bot() {
