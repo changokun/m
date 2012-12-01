@@ -138,7 +138,8 @@ class m {
 				break;
 				case 'integer':
 					$done = true;
-					array_unshift($label, number_format($dumpee, 0, '.', ','));
+					//array_unshift($label, number_format($dumpee, 0, '.', ','));
+					array_unshift($label, $dumpee);
 				break;
 			}
 
@@ -275,7 +276,7 @@ class m {
 			break;
 
 			case 'integer':
-				?><span class="integer_value"><?=number_format($dumpee, 0, '.', ',')?> <span class="vDump_meta_info">(integer)</span></span><?
+				?><span class="integer_value"><?//number_format($dumpee, 0, '.', ',')?><?=$dumpee?> <span class="vDump_meta_info">(integer)</span></span><?
 			break;
 
 			case 'string':
@@ -288,9 +289,10 @@ class m {
 
 			case 'array':
 				$sorted = false;
-				if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
+				//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
 				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 				<? foreach($dumpee as $key => $value): ?>
+					<? if($key == 'GLOBALS') $value = '$GLOBALS cannot be dumped due to possible recursion.'; ?>
 					<? if(is_string($value) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $value = 'JA JA JA'; ?>
 					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?= self::_dump($value, $depth, $key) ?></div>
 				<? endforeach; ?>
