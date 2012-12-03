@@ -292,7 +292,7 @@ class m {
 				//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
 				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 				<? foreach($dumpee as $key => $value): ?>
-					<? if($key == 'GLOBALS') $value = '$GLOBALS cannot be dumped due to possible recursion.'; ?>
+					<? if($key === 'GLOBALS') $value = '$GLOBALS cannot be dumped in this array due to possible recursion.'; ?>
 					<? if(is_string($value) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $value = 'JA JA JA'; ?>
 					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?= self::_dump($value, $depth, $key) ?></div>
 				<? endforeach; ?>
@@ -313,6 +313,7 @@ class m {
 				if($missive) array_push($keys, 'missive');
 				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="vDump_depth_twistee_control"></span><br><?endif;?>
 					<? foreach($keys as $key): ?>
+						<? if($key === 'GLOBALS') $value = '$GLOBALS cannot be dumped in this object due to possible recursion.'; ?>
 						<? if(is_string($dumpee->$key) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $dumpee->$key = 'JA JA JA'; ?>
 						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?=self::_dump($dumpee->$key, $depth, $key) ?></div>
 					<? endforeach; ?>
