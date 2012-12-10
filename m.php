@@ -292,9 +292,13 @@ class m {
 				//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
 				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 				<? foreach($dumpee as $key => $value): ?>
-					<? if($key === 'GLOBALS') $value = '$GLOBALS cannot be dumped in this array due to possible recursion.'; ?>
-					<? if(is_string($value) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $value = 'JA JA JA'; ?>
-					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?= self::_dump($value, $depth, $key) ?></div>
+					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
+						<? if( ! is_string($value) or ! self::omit($key)) : // do not simply re-assign $value. if the dumpee is passed by ref, you destroy it. ?>
+							<?= self::_dump($value, $depth, $key) ?>
+						<? else : ?>
+							(omitted from dump)
+						<? endif; ?>
+					</div>
 				<? endforeach; ?>
 				</span><?
 			break;
@@ -312,10 +316,14 @@ class m {
 				asort($keys);
 				if($missive) array_push($keys, 'missive');
 				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="vDump_depth_twistee_control"></span><br><?endif;?>
-					<? foreach($keys as $key): ?>
-						<? if($key === 'GLOBALS') $value = '$GLOBALS cannot be dumped in this object due to possible recursion.'; ?>
-						<? if(is_string($dumpee->$key) and (strtolower($key) == 'pass' or stripos($key, 'password') !== false)) $dumpee->$key = 'JA JA JA'; ?>
-						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?><?=self::_dump($dumpee->$key, $depth, $key) ?></div>
+					<? foreach($keys as $key) : ?>
+						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
+							<? if( ! is_string($dumpee->$key) or ! self::omit($key)) : // do not simply re-assign $dumpee->$key. if the dumpee is passed by ref, you destroy it. ?>
+								<?=self::_dump($dumpee->$key, $depth, $key) ?>
+							<? else : ?>
+								(omitted from dump)
+							<? endif; ?>
+						</div>
 					<? endforeach; ?>
 					<? if(get_class($dumpee) != 'stdClass') :
 						$methods = get_class_methods(get_class($dumpee)); ?>
@@ -345,6 +353,13 @@ class m {
 				if(is_numeric($dumpee) and (isset($parentKey) and is_string($parentKey) and (substr($parentKey, -5, 5) == '_date' or substr($parentKey, -4, 4) == 'Date' or substr($parentKey, -9, 9) == 'TimeStamp' or substr($parentKey, -10, 10) == '_timestamp')) or (strlen($dumpee) == 10)) echo date(' (l, F jS, Y \a\t h:i:s A)', (int) $dumpee);
 			break;
 		}
+	}
+
+	static function omit($key) {
+		// todo globals
+		//echo '$GLOBALS cannot be dumped in this array due to possible recursion.';
+		if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return true;
+		return false;
 	}
 
 	/**
@@ -543,9 +558,10 @@ class m {
 		// this is the dev version of the function. do what ever you want.
 		// has help been initted?
 		// i//f( ! isset(self::$helps)) $this->init_help();
-		if($value = persistence::get($area . 'Help', array('session', 'request'), false)) {
+		/*if($value = persistence::get($area . 'Help', array('session', 'request'), false)) {
 			return $value >= $depth;
-		}
+		}*/
+		return (bool) ((isset($_REQUEST[$area . 'Help']) and $_REQUEST[$area . 'Help'] > $depth) or (isset($_SESSION[$area . 'Help']) and $_SESSION[$area . 'Help'] > $depth));
 	}
 
 	public static function turn_on_help($area = 'general', $depth = 1) {
