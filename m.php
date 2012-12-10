@@ -39,10 +39,10 @@ class m {
 		if(isset($_SERVER['site_is_dev'])) self::$is_live = ! (bool) $_SERVER['site_is_dev'];
 
 		if(self::$is_live) {
-			// instantiate the cold version of the stuff (which is this class, unchanged.)
+			// instantiate the hot stuff
 			self::$instance = new m_live();
 		} else {
-			// instantiate the hot stuff
+			// instantiate the cold version of the stuff (which is this class, unchanged.)
 			self::$instance = new m();
 		}
 	}
