@@ -293,7 +293,7 @@ class m {
 				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 				<? foreach($dumpee as $key => $value): ?>
 					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
-						<? if( ! is_string($value) or ! self::omit($key)) : // do not simply re-assign $value. if the dumpee is passed by ref, you destroy it. ?>
+						<? if( ! self::omit($key, $value)) : // do not simply re-assign $value. if the dumpee is passed by ref, you destroy it. ?>
 							<?= self::_dump($value, $depth, $key) ?>
 						<? else : ?>
 							(omitted from dump)
@@ -355,10 +355,12 @@ class m {
 		}
 	}
 
-	static function omit($key) {
-		// todo globals
-		//echo '$GLOBALS cannot be dumped in this array due to possible recursion.';
-		if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return true;
+	static function omit($key, $value) {
+		if(is_scalar($value)) {
+			if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return true;
+		} else {
+			if($key === 'GLOBALS') return true;
+		}
 		return false;
 	}
 
