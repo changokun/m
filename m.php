@@ -355,8 +355,8 @@ class m {
 		}
 	}
 
-	static function omit($key, $value) {
-		if(is_scalar($value)) {
+	static function omit($key, $value = NULL) {
+		if(isset($value) and is_scalar($value)) {
 			if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return true;
 		} else {
 			if($key === 'GLOBALS') return true;
