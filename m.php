@@ -8,6 +8,7 @@ class m {
 	static public $m_email_domain;
 	static private $instance;
 	static private $is_live = true; // play it safe.
+	static private $javascript_has_been_output = false;
 	static protected $functions_that_can_get_hot_output = array('aMail'); // be careful adding to this.
 	static protected $dump_these_global_vars_for_still_in_use = array('_REQUEST', '_SERVER');
 	static protected $dump_these_global_vars_for_aMail = array('_REQUEST', '_SERVER');
@@ -20,6 +21,11 @@ class m {
 				self::$$key = $value;
 			}
 		}
+	}
+
+	/** use this to get it to put the javascript on page again, if nec. i'm using this after closing the connection in other output. */
+	public static function reset_javascript_output_check() {
+		self::$javascript_has_been_output = false;
 	}
 
 	// here's the pattern:
@@ -98,8 +104,6 @@ class m {
 
 	protected function do_dump($dumpee, $label = 'no label provided', $options = array()) {
 
-			static $javascript_has_been_output = false;
-
 			if(is_scalar($label)) $label = array($label); else $label = array();
 
 			$data_type = gettype($dumpee);
@@ -156,8 +160,8 @@ class m {
 			<? endif; ?>
 			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
 		</div>
-		<? if( ! $javascript_has_been_output): // only for the first one.?>
-			<? $javascript_has_been_output = true; ?>
+		<? if( ! self::$javascript_has_been_output): // only for the first one.?>
+			<? self::$javascript_has_been_output = true; ?>
 			<script type="text/javascript" src="<?=self::$jQuery_src_url?>"></script>
 			<script type="text/javascript">
 				if(typeof $ == 'function') {
@@ -296,7 +300,7 @@ class m {
 						<? if( ! self::omit($key, $value)) : // do not simply re-assign $value. if the dumpee is passed by ref, you destroy it. ?>
 							<?= self::_dump($value, $depth, $key) ?>
 						<? else : ?>
-							(omitted from dump)
+							(<?=gettype($value)?> omitted from dump)
 						<? endif; ?>
 					</div>
 				<? endforeach; ?>
