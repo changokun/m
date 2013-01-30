@@ -116,12 +116,25 @@ class m {
 					array_unshift($label, $dumpee ? '<span class="boolean_true_value">true</span>' : '<span class="boolean_false_value">false</span>');
 				break;
 				case 'object':
-					if($label[0] == 'no label provided') {
-						if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
-						elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
+					if(method_exists($dumpee, 'get_dump_data')) {
+						die("<hr>this never works<br>Died on line " . __LINE__ . " of " . __FILE__);
+						$temp = $dumpee->get_dump_data();
+						var_dump($temp);
+						die("<hr>XXX<br>Died on line " . __LINE__ . " of " . __FILE__);
+						$dumpee = $temp->dump_data;
+						if($label[0] == 'no label provided') {
+							if(count($temp->labels)) $label = $temp->labels;
+						} else {
+							$label = array_merge($label, $temp->labels);
+						}
+					} else {
+						if($label[0] == 'no label provided') {
+							if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
+							elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
+						}
+						$label[] = $data_type;
+						$label[] = get_class($dumpee);
 					}
-					$label[] = $data_type;
-					$label[] = get_class($dumpee);
 				break;
 				default:
 					$label[] = $data_type;
@@ -242,14 +255,18 @@ class m {
 				div.vDump span div { padding:3px; margin:3px;}
 				div.vDump div div { margin-left:7px; }
 				div.vDump div div.depth_0 { margin-left:3px; }
-				div.depth_0 {background-color:#EEE;}
-				div.depth_1 {background-color:#DDD;}
-				div.depth_2 {background-color:#CCC;}
-				div.depth_3 {background-color:#BBB;}
+				<?
+					for ($x = 1; $x < 12; $x++) { // this is a big old wtf. dechex maybe doesn't like negative numbers?
+						echo "div.depth_$x { background-color: #" . str_repeat(strtoupper(dechex(15 - $x)), 3) . '; ';
+						if($x > 7) echo 'color:white;';
+						echo "}\n";
+					}
+  				?>
 				.key { color: #444; }
 				.vDump_meta_info { color:#333 }
 				.vDump_meta_info_main { font-size:9px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
 				.string_value { color:olive }
+				.depth_3 .string_value { color:white }
 				.integer_value { color:magenta }
 				.float_value { color:purple }
 				.boolean_true_value { color:green }
