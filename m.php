@@ -15,6 +15,8 @@ class m {
 	static $sensitive_folders = array(); // will attempt to scrub these from output
 	static public $jQuery_src_url = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
 
+	static public $classes_to_skip = array('mysqli_result'); // outputing these seems troublesome.
+
 	private function __construct() {
 		if(file_exists(dirname(__FILE__) . '/m.ini')) {
 			foreach(parse_ini_file('m.ini', true) as $key => $value) {
@@ -56,28 +58,21 @@ class m {
 	/**
 	* dump stuff. click the black bar to expand when the data is complex. you can set options that include founder verb, relevant backtrace depth, etc.
 	*
+	* this function prepares your label and the backtrace info, then calls sub functions.
+	*
 	* @param mixed $dumpee the thing you want dumpd
 	* @param string $label the most visible part of the dump
 	* @param array $options see code for all options
 	*/
 	public static function dump($dumpee, $label = 'no label provided', $options = array()) {
-		// temp for debug usage: todo delete next few lines
-		if( ! is_array($options)) {
-			if(is_numeric($options)) {
-				$options = array('relevant_backtrace_depth' => $options);
-			} else {
-				m::death(debug_backtrace());
-			}
-		}
-
 		if( ! isset(self::$instance)) self::init();
 		if( ! isset($options['founder'])) {
-			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on ';
+			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on '; // keep the html entity. many times dumps occur on headless pages
 			if( ! isset($options['relevant_backtrace_depth'])) $options['relevant_backtrace_depth'] = 0;
 			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['relevant_backtrace_depth']);
 		}
 		// collapse? expand?
-		if( ! isset($options['collapse'])) $options['collapse'] = true;
+		$options['collapse'] = ((isset($options['collapse']) and $options['collapse']) or ( ! isset($options['expand']) or ! $options['expand']));
 
 		self::$instance->do_dump($dumpee, $label, $options);
 	}
@@ -102,12 +97,20 @@ class m {
 
 	}
 
+	/**
+	* this one creates the html wrapper and label
+	*
+	* @param mixed $dumpee
+	* @param string $label
+	* @param array $options
+	*/
 	protected function do_dump($dumpee, $label = 'no label provided', $options = array()) {
 
 			if(is_scalar($label)) $label = array($label); else $label = array();
 
 			$data_type = gettype($dumpee);
 
+			// let us figure out the label
 			switch($data_type) {
 				case 'string':
 					$label[] = '<span title="' . number_format(strlen($dumpee)) . ' character' . (strlen($dumpee) != 1 ? 's' : '') . '" >' . $data_type . '</span>';
@@ -116,25 +119,13 @@ class m {
 					array_unshift($label, $dumpee ? '<span class="boolean_true_value">true</span>' : '<span class="boolean_false_value">false</span>');
 				break;
 				case 'object':
-					if(method_exists($dumpee, 'get_dump_data')) {
-						die("<hr>this never works<br>Died on line " . __LINE__ . " of " . __FILE__);
-						$temp = $dumpee->get_dump_data();
-						var_dump($temp);
-						die("<hr>XXX<br>Died on line " . __LINE__ . " of " . __FILE__);
-						$dumpee = $temp->dump_data;
-						if($label[0] == 'no label provided') {
-							if(count($temp->labels)) $label = $temp->labels;
-						} else {
-							$label = array_merge($label, $temp->labels);
-						}
-					} else {
-						if($label[0] == 'no label provided') {
-							if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
-							elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
-						}
-						$label[] = $data_type;
-						$label[] = get_class($dumpee);
+					if($label[0] == 'no label provided') {
+						// these are some special classes.
+						if(get_class($dumpee) == 'bass_account') $label[0] = $dumpee->name;
+						elseif(get_class($dumpee) == 'bass_user') $label[0] = $dumpee->name . ' (current user)';
 					}
+					$label[] = $data_type;
+					$label[] = get_class($dumpee);
 				break;
 				default:
 					$label[] = $data_type;
@@ -149,6 +140,10 @@ class m {
 					if(strlen($dumpee) < $trim_length) $done = true;
 					array_unshift($label, substr($dumpee, 0, $trim_length) . (strlen($dumpee) > $trim_length ? '&nbsp;&hellip;' : ''));
 				break;
+				case 'boolean':
+					$done = true;
+					array_unshift($label, $dumpee ? 'true' : 'false');
+				break;
 				case 'double':
 					$done = true;
 					array_unshift($label, $dumpee);
@@ -159,133 +154,42 @@ class m {
 					array_unshift($label, $dumpee);
 				break;
 			}
-
-
+			// there are some extra blank lines and indentation changes, please keep them, it makes the output more readable.
 		?>
-		<div class="vDump">
-			<? if($label) : ?>
-				<div style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px; " class = "vDump_label">
-					<?=implode(' | ', $label)?>
-				</div>
-			<? endif; ?>
-			<? if( ! $done) : ?>
-				<div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1, $label)?></div>
-			<? endif; ?>
-			<div class="vDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
-		</div>
-		<? if( ! self::$javascript_has_been_output): // only for the first one.?>
-			<? self::$javascript_has_been_output = true; ?>
-			<script type="text/javascript" src="<?=self::$jQuery_src_url?>"></script>
-			<script type="text/javascript">
-				if(typeof $ == 'function') {
-					$(function() {
-						$("div.vDump_label").add("div.vDump_meta_info_main").css('cursor', 'pointer').click(function() {
-							$(this).parent().find('div.collapseybull').first().toggle(500);
-						})
-						$("div.collapseybull_on_init").hide(500);
-						$(".vDump_depth_twistee_control").each(function(){
-							parent = $(this).closest("[class^='depth_']");
-							if(parent.length) {
-								parent_depth = parseInt(parent.attr('class').substr(6));
-								depth = parent_depth +1;
-								zone = parent.find(".depth_" + depth);
-								if(zone.length) {
-									if(zone.css('display') != 'none') {
-										// is shown. make the control a -
-										$(this).html('-');
-									} else {
-										/// hidden, make the control a +
-										$(this).html('+');
-									}
 
-									$(this).click(function(){
-										parent = $(this).closest("[class^='depth_']");
-										if(parent.length && typeof parent.attr('class') != 'undefined') {
-											parent_depth = parseInt(parent.attr('class').substr(6));
-											depth = parent_depth +1;
-											zone = parent.find(".depth_" + depth);
-											if(zone.css('display') != 'none') {
-												// is shown. make the control a -
-												$(this).html('+');
-											} else {
-												/// hidden, make the control a +
-												$(this).html('-');
-											}
-											zone.toggle(500);
-										}
-									});
 
-								} else {
-									$(this).remove();
-								}
-							}
-						});
-						$(".vDump_twistee_control").each(function(){
-							zone = $(this).parent().find(".vDump_twistee_zone");
-							if(zone.length) {
-								if(zone.css('display') != 'none') {
-									// is shown. make the control a -
-									$(this).html('-');
-								} else {
-									/// hidden, make the control a +
-									$(this).html('+');
-								}
+<div class="mDump">
+	<? if($label) : ?><div class = "mDump_label"><?=implode(' | ', $label)?></div><? endif; ?>
+	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1)?></div><? endif; ?>
+	<div class="mDump_meta_info_main"><?=$options['founder']?></div>
+</div>
 
-								$(this).click(function(){
-									zone = $(this).parent().find(".vDump_twistee_zone");
-									if(zone.css('display') != 'none') {
-										// is shown. make the control a -
-										$(this).html('+');
-									} else {
-										/// hidden, make the control a +
-										$(this).html('-');
-									}
-									zone.toggle(500);
-								});
 
-							} else {
-								$(this).remove();
-							}
-						});
-					});
-				}
-			</script>
-			<style>
-				div.vDump { border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0; }
-				div.vDump span div { padding:3px; margin:3px;}
-				div.vDump div div { margin-left:7px; }
-				div.vDump div div.depth_0 { margin-left:3px; }
-				<?
-					for ($x = 1; $x < 12; $x++) { // this is a big old wtf. dechex maybe doesn't like negative numbers?
-						echo "div.depth_$x { background-color: #" . str_repeat(strtoupper(dechex(15 - $x)), 3) . '; ';
-						if($x > 7) echo 'color:white;';
-						echo "}\n";
-					}
-  				?>
-				.key { color: #444; }
-				.vDump_meta_info { color:#333 }
-				.vDump_meta_info_main { font-size:9px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
-				.string_value { color:olive }
-				.depth_3 .string_value { color:white }
-				.integer_value { color:magenta }
-				.float_value { color:purple }
-				.boolean_true_value { color:green }
-				.boolean_false_value { color:crimson }
-				.null_value { color:blue; text-transform:uppercase}
-				.vDump_depth_twistee_control, .vDump_twistee_control {margin:0 5px; cursor:pointer;}
-				.note { color:#666; font-size:12px;}
-			</style>
-		<? endif;
+<? echo self::get_asset_html();
+	}
 
-		}
-
-	static private function _dump($dumpee, $depth, $parentKey = '') {
-		static $separator = ' =&gt; ';
+	/**
+	* this is the one that handles the interior, and is recursed.
+	*
+	* @param mixed $dumpee
+	* @param int $depth
+	* @param mixed $parent_key - sort of the label? so we know what we are dealing with?
+	*/
+	static private function _dump($dumpee, $depth, $parent_key = '') {
+		static $separator = ' =&gt; '; // again, maintain html entities.
 		$depth ++;
 		$data_type = gettype($dumpee);
+
+		// do we even want to dump this thing?
+		if($putative = self::omit_by_key($parent_key) or $putative = self::omit_by_value($dumpee)) {
+			$putative = is_scalar($putative) ? $putative : $data_type . ' omitted from dump';
+			echo '<span class="mDump_meta_info">(' . $putative . ')</span>';
+			return;
+		}
+
 		switch($data_type) {
 			case 'NULL':
-				?><span class="null_value">null</span><?
+				echo '<span class="null_value">null</span>';
 			break;
 
 			case 'boolean':
@@ -293,35 +197,37 @@ class m {
 			break;
 
 			case 'double':
-				?><span class="float_value"><?=$dumpee?> <span class="vDump_meta_info">(float/double)</span></span><?
+				?><span class="float_value"><?=$dumpee?> <span class="mDump_meta_info">(float/double)</span></span><?
 			break;
 
 			case 'integer':
-				?><span class="integer_value"><?//number_format($dumpee, 0, '.', ',')?><?=$dumpee?> <span class="vDump_meta_info">(integer)</span></span><?
+				?><span class="integer_value"><?=$dumpee // no number format, plz?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 4) echo strlen($dumpee) . '-digit ';?>integer)</span></span><?
 			break;
 
 			case 'string':
 				if(strlen($dumpee)):?>
-					<span class='string_value' title="string <?=number_format(strlen($dumpee))?> characters"><?=$dumpee?></span>
+					<span class='string_value'><?=$dumpee?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 8) echo strlen($dumpee) . '-character ';?>string)</span></span>
 				<? else: ?>
-					<span class="vDump_meta_info">(zero-length string)</span>
+					<span class="mDump_meta_info"><span class="mDump_meta_info">(zero-length string)</span></span>
 				<? endif;
 			break;
 
 			case 'array':
 				$sorted = false;
-				//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
-				?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="vDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
-				<? foreach($dumpee as $key => $value): ?>
-					<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
-						<? if( ! self::omit($key, $value)) : // do not simply re-assign $value. if the dumpee is passed by ref, you destroy it. ?>
-							<?= self::_dump($value, $depth, $key) ?>
-						<? else : ?>
-							(<?=gettype($value)?> omitted from dump)
-						<? endif; ?>
+				if( ! count($dumpee)) {
+					echo '<span class="mDump_meta_info">(empty array)</span>';
+				} else {
+					//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
+					?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="mDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
+					<? foreach($dumpee as $key => $value): ?>
+					<div class='depth_<?=$depth?>'>
+						<span class="key"><?=$key?></span>
+						<?=$separator?>
+						<?= self::_dump($value, $depth, $key) ?>
 					</div>
-				<? endforeach; ?>
-				</span><?
+					<? endforeach; ?>
+					</span><?
+				}
 			break;
 
 			case 'object':
@@ -336,20 +242,16 @@ class m {
 				}
 				asort($keys);
 				if($missive) array_push($keys, 'missive');
-				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="vDump_depth_twistee_control"></span><br><?endif;?>
+				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="mDump_depth_twistee_control"></span><br><?endif;?>
 					<? foreach($keys as $key) : ?>
 						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
-							<? if( ! is_string($dumpee->$key) or ! self::omit($key)) : // do not simply re-assign $dumpee->$key. if the dumpee is passed by ref, you destroy it. ?>
-								<?=self::_dump($dumpee->$key, $depth, $key) ?>
-							<? else : ?>
-								(omitted from dump)
-							<? endif; ?>
+							<?=self::_dump($dumpee->$key, $depth, $key) ?>
 						</div>
 					<? endforeach; ?>
 					<? if(get_class($dumpee) != 'stdClass') :
 						$methods = get_class_methods(get_class($dumpee)); ?>
-						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;" class="depth_<?=$depth?>"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='vDump_twistee_control'></span>
-							<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="vDump_twistee_zone">';
+						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;" class="depth_<?=$depth?>"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
+							<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
 								foreach($methods as $method_name): ?>
 								<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
 							<? endforeach; echo '</ul>'; ?>
@@ -357,6 +259,10 @@ class m {
 					<? endif; ?>
 				</span><?
 			break;
+
+			case 'resource': ?>
+				<span class="mDump_meta_info"><?=get_resource_type($dumpee)?> resources cannot be dumped. consider writing some special handling.</span>
+			<? break;
 
 			case 'xxx': ?>
 				<xmp style="font-size:12px; font-family:Arial; padding:5px;"><?var_dump($dumpee);?></xmp>
@@ -371,18 +277,133 @@ class m {
 		switch($data_type) {
 			case 'integer':
 			case 'string':
-				if(is_numeric($dumpee) and (isset($parentKey) and is_string($parentKey) and (substr($parentKey, -5, 5) == '_date' or substr($parentKey, -4, 4) == 'Date' or substr($parentKey, -9, 9) == 'TimeStamp' or substr($parentKey, -10, 10) == '_timestamp')) or (strlen($dumpee) == 10)) echo date(' (l, F jS, Y \a\t h:i:s A)', (int) $dumpee);
+				if(is_numeric($dumpee) and (isset($parent_key) and is_string($parent_key) and (substr($parent_key, -5, 5) == '_date' or substr($parent_key, -4, 4) == 'Date' or substr($parent_key, -9, 9) == 'TimeStamp' or substr($parent_key, -10, 10) == '_timestamp')) or (is_numeric($dumpee) and strlen($dumpee) == 10)) echo date(' (l, F jS, Y \a\t h:i:s A)', (int) $dumpee);
 			break;
 		}
 	}
 
-	static function omit($key, $value = NULL) {
-		if(isset($value) and is_scalar($value)) {
-			if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return true;
-		} else {
-			if($key === 'GLOBALS') return true;
+	static function omit_by_key($key = NULL) {
+		if(empty($key)) return false;
+		if($key === 'GLOBALS') return $key . ' cannot be dumped; too much recursion.';
+		if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return 'passwords are omitted from dumps';
+		return false;
+	}
+
+	static function omit_by_value($value = NULL) {
+		if(empty($value)) return false;
+		if(is_object($value)) {
+			$class = get_class($value);
+			if(in_array($class, self::$classes_to_skip)) return $class . ' objects can be troublesome and are skipped.';
 		}
 		return false;
+	}
+
+	static private function get_asset_html() {
+		if(self::$javascript_has_been_output) return NULL; // only once, amigo
+		self::$javascript_has_been_output = true;
+		ob_start(); ?>
+<script type="text/javascript" src="<?=self::$jQuery_src_url?>"></script>
+<script type="text/javascript">
+	if(typeof $ == 'function') {
+		$(function() {
+			$("div.mDump_label").add("div.mDump_meta_info_main").css('cursor', 'pointer').click(function() {
+				$(this).parent().find('div.collapseybull').first().toggle(500);
+			})
+			$("div.collapseybull_on_init").hide(500);
+			$(".mDump_depth_twistee_control").each(function(){
+				parent = $(this).closest("[class^='depth_']");
+				if(parent.length) {
+					parent_depth = parseInt(parent.attr('class').substr(6));
+					depth = parent_depth +1;
+					zone = parent.find(".depth_" + depth);
+					if(zone.length) {
+						if(zone.css('display') != 'none') {
+							// is shown. make the control a -
+							$(this).html('-');
+						} else {
+							/// hidden, make the control a +
+							$(this).html('+');
+						}
+
+						$(this).click(function(){
+							parent = $(this).closest("[class^='depth_']");
+							if(parent.length && typeof parent.attr('class') != 'undefined') {
+								parent_depth = parseInt(parent.attr('class').substr(6));
+								depth = parent_depth +1;
+								zone = parent.find(".depth_" + depth);
+								if(zone.css('display') != 'none') {
+									// is shown. make the control a -
+									$(this).html('+');
+								} else {
+									/// hidden, make the control a +
+									$(this).html('-');
+								}
+								zone.toggle(500);
+							}
+						});
+
+					} else {
+						$(this).remove();
+					}
+				}
+			});
+			$(".mDump_twistee_control").each(function(){
+				zone = $(this).parent().find(".mDump_twistee_zone");
+				if(zone.length) {
+					if(zone.css('display') != 'none') {
+						// is shown. make the control a -
+						$(this).html('-');
+					} else {
+						/// hidden, make the control a +
+						$(this).html('+');
+					}
+
+					$(this).click(function(){
+						zone = $(this).parent().find(".mDump_twistee_zone");
+						if(zone.css('display') != 'none') {
+							// is shown. make the control a -
+							$(this).html('+');
+						} else {
+							/// hidden, make the control a +
+							$(this).html('-');
+						}
+						zone.toggle(500);
+					});
+
+				} else {
+					$(this).remove();
+				}
+			});
+		});
+	}
+</script>
+<style>
+	div.mDump { border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0; }
+	div.mDump span div { padding:3px; margin:3px;}
+	div.mDump div div { margin-left:7px; }
+	div.mDump div div.depth_0 { margin-left:3px; }
+<?
+	for ($x = 1; $x < 12; $x++) { // this is a big old wtf. dechex maybe doesn't like negative numbers?
+		echo "	div.depth_$x { background-color: #" . str_repeat(strtoupper(dechex(15 - $x)), 3) . '; ';
+		if($x > 7) echo 'color:white;';
+		echo "}\n";
+	}
+?>
+	.key { color: #444; }
+	.mDump_label { font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px; }
+	.mDump_meta_info { color:#999 }
+	.mDump_meta_info_main { font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
+	.string_value { color:olive }
+	.depth_3 .string_value { color:white }
+	.integer_value { color:magenta }
+	.float_value { color:purple }
+	.boolean_true_value { color:green }
+	.boolean_false_value { color:crimson }
+	.null_value { color:blue; text-transform:uppercase}
+	.mDump_depth_twistee_control, .mDump_twistee_control {margin:0 5px; cursor:pointer;}
+	.note { color:#666; font-size:12px;}
+</style>
+		<? return ob_get_clean();
 	}
 
 	/**
