@@ -15,7 +15,7 @@ class m {
 	static $sensitive_folders = array(); // will attempt to scrub these from output
 	static public $jQuery_src_url = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
 
-	static public $classes_to_skip = array('mysqli_result'); // outputing these seems troublesome.
+	static public $classes_to_skip = array(); // outputing these seems troublesome.
 
 	private function __construct() {
 		if(file_exists(dirname(__FILE__) . '/m.ini')) {
@@ -72,7 +72,7 @@ class m {
 			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['relevant_backtrace_depth']);
 		}
 		// collapse? expand?
-		$options['collapse'] = ((isset($options['collapse']) and $options['collapse']) or ( ! isset($options['expand']) or ! $options['expand']));
+		$options['collapse'] = isset($options['collapse']) ? $options['collapse'] : true;
 
 		self::$instance->do_dump($dumpee, $label, $options);
 	}
@@ -550,20 +550,17 @@ class m {
 	/**
 	* death dumps all its arguments then stops execution.
 	* if in live mode, it throws an exception, which should be properly handled by your code.
-	*
 	*/
 	public static function death() { // function with nice name that you use in your code.
 		if( ! isset(self::$instance)) self::init(); // get the instance
 		self::$instance->do_death(func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
 		// now go find both function definitions.
-}
+	}
 
 	protected function do_death() {
 
 		// get any decho output
-		echo '<div style="border:2px solid tan">';
-		echo m::get_HTML_output();
-		echo '</div>';
+		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan">' . $temp . '</div>';
 
 		// in the case of a death, the relevant backtrace depth is always 2
 		$founder = 'Cause of death on ' . self::get_caller_fragment(1);
@@ -737,6 +734,16 @@ class m_live extends m {
 		// we do nothing live.
 	}
 
+	// death section //////////////////////////////////////////////////////
+	/**
+	* death dumps all its arguments then stops execution.
+	* if in live mode, it throws an exception, which should be properly handled by your code.
+	*/
+	protected function do_death() {
+		// in the case of a death, the relevant backtrace depth is always 2
+		$founder = 'Cause of death on ' . self::get_caller_fragment(1);
+		throw new Exception($founder . ' | m::death in code. tell alex, it is always him, that jerk.');
+	}
 
 
 }
