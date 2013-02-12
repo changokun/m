@@ -181,7 +181,7 @@ class m {
 		$data_type = gettype($dumpee);
 
 		// do we even want to dump this thing?
-		if($putative = self::omit_by_key($parent_key) or $putative = self::omit_by_value($dumpee)) {
+		if($putative = self::omit_by_key($parent_key, is_scalar($dumpee)) or $putative = self::omit_by_value($dumpee)) {
 			$putative = is_scalar($putative) ? $putative : $data_type . ' omitted from dump';
 			echo '<span class="mDump_meta_info">(' . $putative . ')</span>';
 			return;
@@ -282,10 +282,10 @@ class m {
 		}
 	}
 
-	static function omit_by_key($key = NULL) {
+	static function omit_by_key($key = NULL, $data_is_scalar = true) {
 		if(empty($key)) return false;
 		if($key === 'GLOBALS') return $key . ' cannot be dumped; too much recursion.';
-		if($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false) return 'passwords are omitted from dumps';
+		if($data_is_scalar and ($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false)) return 'passwords are omitted from dumps';
 		return false;
 	}
 
