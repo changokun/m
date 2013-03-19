@@ -740,9 +740,7 @@ class m_live extends m {
 	* if in live mode, it throws an exception, which should be properly handled by your code.
 	*/
 	protected function do_death() {
-		// in the case of a death, the relevant backtrace depth is always 2
-		$founder = 'Cause of death on ' . self::get_caller_fragment(1);
-		throw new Exception($founder . ' | m::death in code. tell alex, it is always him, that jerk.');
+		throw new Exception('Sorry, we have an issue handling your request.');
 	}
 
 
