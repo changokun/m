@@ -620,13 +620,13 @@ class m {
 
 	public static function decho() { // function with nice name that you use in your code.
 		if( ! isset(self::$instance)) self::init(); // get the instance
-		self::$instance->do_decho(func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
+		// todo - make this an apply
+		call_user_func_array(array(self::$instance, 'do_decho'), func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
 		// now go find both function definitions.
 	}
 
 	protected function do_decho() {
-		$temp = func_get_args(); // mind you how args are passedin to this slave func
-		$args = array_pop($temp);
+		$args = func_get_args();
 
 		// pull out some behavior keywords
 		foreach($args as $key => $arg) {
@@ -678,7 +678,7 @@ class m {
 	}
 
 	protected function get_scalar_decho_HTML($str) {
-		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags($this->get_caller_fragment(2)) . '">' . $str . '</div>';
+		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags($this->get_caller_fragment(3)) . '">' . $str . '</div>';
 	}
 
 
