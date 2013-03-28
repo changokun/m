@@ -586,7 +586,7 @@ class m {
 	* @param string, array $area defaults to general
 	* @param int $depth def 1
 	*/
-	public static function help($area = 'general', $depth = 1) {
+	public static function help($area = 'general', $depth = 0) {
 		if( ! isset(self::$instance)) self::init(); // get the instance
 		self::$instance->do_help($area, $depth);
 	}
@@ -595,7 +595,7 @@ class m {
 	* return boolean indicating whether or not help is enabled for the area, and at the $depth
 	*
 	*/
-	protected function do_help($area, $depth) { // defaults specified in pub func
+	protected function do_help($area, $depth = 0) { // defaults specified in pub func
 		// this is the dev version of the function. do what ever you want.
 		// has help been initted?
 		// i//f( ! isset(self::$helps)) $this->init_help();
