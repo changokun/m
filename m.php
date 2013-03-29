@@ -588,7 +588,7 @@ class m {
 	*/
 	public static function help($area = 'general', $depth = 0) {
 		if( ! isset(self::$instance)) self::init(); // get the instance
-		self::$instance->do_help($area, $depth);
+		return self::$instance->do_help($area, $depth);
 	}
 
 	/**
