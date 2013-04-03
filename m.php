@@ -158,10 +158,10 @@ class m {
 		?>
 
 
-<div class="mDump">
-	<? if($label) : ?><div class = "mDump_label"><?=implode(' | ', $label)?></div><? endif; ?>
+<div class="mDump" style="border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0;">
+	<? if($label) : ?><div class = "mDump_label" style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px;"><?=implode(' | ', $label)?></div><? endif; ?>
 	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1)?></div><? endif; ?>
-	<div class="mDump_meta_info_main"><?=$options['founder']?></div>
+	<div class="mDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
 </div>
 
 
@@ -197,11 +197,11 @@ class m {
 			break;
 
 			case 'double':
-				?><span class="float_value"><?=$dumpee?> <span class="mDump_meta_info">(float/double)</span></span><?
+				?><span class="float_value"><?=$dumpee?> <span class="mDump_meta_info">(<?=ceil(log10($dumpee))?>-digit float/double)</span></span><?
 			break;
 
 			case 'integer':
-				?><span class="integer_value"><?=$dumpee // no number format, plz?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 4) echo strlen($dumpee) . '-digit ';?>integer)</span></span><?
+				?><span class="integer_value"><?=$dumpee // no number format, plz?> <span class="mDump_meta_info">(<?if(ceil(log10($dumpee)) > 4) echo ceil(log10($dumpee)) . '-digit ';?>integer)</span></span><?
 			break;
 
 			case 'string':
@@ -220,7 +220,7 @@ class m {
 					//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
 					?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="mDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
 					<? foreach($dumpee as $key => $value): ?>
-					<div class='depth_<?=$depth?>'>
+					<div class='depth_<?=$depth?>' style<?=self::get_inline_style_tag_for_depth($depth)?>>
 						<span class="key"><?=$key?></span>
 						<?=$separator?>
 						<?= self::_dump($value, $depth, $key) ?>
@@ -244,13 +244,13 @@ class m {
 				if($missive) array_push($keys, 'missive');
 				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="mDump_depth_twistee_control"></span><br><?endif;?>
 					<? foreach($keys as $key) : ?>
-						<div class='depth_<?=$depth?>'><span class="key"><?=$key?></span><?=$separator?>
+						<div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=$separator?>
 							<?=self::_dump($dumpee->$key, $depth, $key) ?>
 						</div>
 					<? endforeach; ?>
 					<? if(get_class($dumpee) != 'stdClass') :
 						$methods = get_class_methods(get_class($dumpee)); ?>
-						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;" class="depth_<?=$depth?>"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
+						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
 							<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
 								foreach($methods as $method_name): ?>
 								<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
@@ -296,6 +296,12 @@ class m {
 			if(in_array($class, self::$classes_to_skip)) return $class . ' objects can be troublesome and are skipped.';
 		}
 		return false;
+	}
+
+	static private function get_inline_style_tag_for_depth($depth) {
+		echo 'style="padding:3px; margin:3px; background-color: #' . str_repeat(strtoupper(dechex(15 - $depth)), 3) . '; ';
+		if($depth > 7) echo ' color:white; ';
+		echo '"';
 	}
 
 	static private function get_asset_html() {
@@ -378,7 +384,6 @@ class m {
 	}
 </script>
 <style>
-	div.mDump { border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0; }
 	div.mDump span div { padding:3px; margin:3px;}
 	div.mDump div div { margin-left:7px; }
 	div.mDump div div.depth_0 { margin-left:3px; }
@@ -390,9 +395,7 @@ class m {
 	}
 ?>
 	.key { color: #444; }
-	.mDump_label { font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px; }
 	.mDump_meta_info { color:#999 }
-	.mDump_meta_info_main { font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; }
 	.string_value { color:olive }
 	.depth_3 .string_value { color:white }
 	.integer_value { color:magenta }
