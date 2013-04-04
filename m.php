@@ -3,6 +3,7 @@
 // will need short_open_tag = On in your php.ini
 
 class m {
+	const SEPARATOR = ' =&gt; '; // again, maintain html entities.
 	static public $developer_email;
 	static public $object_email;
 	static public $m_email_domain;
@@ -176,7 +177,6 @@ class m {
 	* @param mixed $parent_key - sort of the label? so we know what we are dealing with?
 	*/
 	static private function _dump($dumpee, $depth, $parent_key = '') {
-		static $separator = ' =&gt; '; // again, maintain html entities.
 		$depth ++;
 		$data_type = gettype($dumpee);
 
@@ -217,16 +217,12 @@ class m {
 				if( ! count($dumpee)) {
 					echo '<span class="mDump_meta_info">(empty array)</span>';
 				} else {
-					//if(array_values($dumpee) !== $dumpee) $sorted = true; ksort($dumpee); // it's associative, so sort it. -- may cause errors
-					?><span>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="mDump_depth_twistee_control"></span><?=$sorted ? ' <span class="note">(This associative array has been sorted.)</note>' : '';?><br>
+					?>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="mDump_depth_twistee_control"></span>
 					<? foreach($dumpee as $key => $value): ?>
-					<div class='depth_<?=$depth?>' style<?=self::get_inline_style_tag_for_depth($depth)?>>
-						<span class="key"><?=$key?></span>
-						<?=$separator?>
-						<?= self::_dump($value, $depth, $key) ?>
-					</div>
-					<? endforeach; ?>
-					</span><?
+						<div class='depth_<?=$depth?>' style<?=self::get_inline_style_tag_for_depth($depth)?>>
+							<span class="key"><?=$key?></span><?=self::SEPARATOR?><?= self::_dump($value, $depth, $key) ?>
+						</div>
+					<? endforeach;
 				}
 			break;
 
@@ -242,22 +238,22 @@ class m {
 				}
 				asort($keys);
 				if($missive) array_push($keys, 'missive');
-				?><span><?if($depth):?>object of class <?=get_class($dumpee)?><span class="mDump_depth_twistee_control"></span><br><?endif;?>
-					<? foreach($keys as $key) : ?>
-						<div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=$separator?>
-							<?=self::_dump($dumpee->$key, $depth, $key) ?>
-						</div>
-					<? endforeach; ?>
-					<? if(get_class($dumpee) != 'stdClass') :
-						$methods = get_class_methods(get_class($dumpee)); ?>
-						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
-							<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
-								foreach($methods as $method_name): ?>
-								<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
-							<? endforeach; echo '</ul>'; ?>
-						</div>
-					<? endif; ?>
-				</span><?
+
+				if($depth):?><?=get_class($dumpee)?> object<span class="mDump_depth_twistee_control"></span><?endif;?>
+				<? foreach($keys as $key) : ?>
+					<div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
+					</div>
+				<? endforeach; ?>
+
+				<? if(get_class($dumpee) != 'stdClass') :
+					$methods = get_class_methods(get_class($dumpee)); ?>
+					<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
+						<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
+							foreach($methods as $method_name): ?>
+							<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
+						<? endforeach; echo '</ul>'; ?>
+					</div>
+				<? endif;
 			break;
 
 			case 'resource': ?>
@@ -384,15 +380,15 @@ class m {
 	}
 </script>
 <style>
-	div.mDump span div { padding:3px; margin:3px;}
+/*	div.mDump span div { padding:3px; margin:3px;}*/
 	div.mDump div div { margin-left:7px; }
 	div.mDump div div.depth_0 { margin-left:3px; }
 <?
-	for ($x = 1; $x < 12; $x++) { // this is a big old wtf. dechex maybe doesn't like negative numbers?
+/*	for ($x = 1; $x < 12; $x++) { // this is a big old wtf. dechex maybe doesn't like negative numbers?
 		echo "	div.depth_$x { background-color: #" . str_repeat(strtoupper(dechex(15 - $x)), 3) . '; ';
 		if($x > 7) echo 'color:white;';
 		echo "}\n";
-	}
+	}*/
 ?>
 	.key { color: #444; }
 	.mDump_meta_info { color:#999 }
