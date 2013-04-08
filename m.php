@@ -443,7 +443,7 @@ class m {
 	}
 
 	static function aMail() {
-		$headers  = "From: aMail_{$_SERVER['SERVER_NAME']}@{self::$m_email_domain}\r\n";
+		$headers  = "From: aMail_{$_SERVER['SERVER_NAME']}@" . self::$m_email_domain . "\r\n";
 		$headers .= "Content-type: text/html\r\n";
 		$debugInfo = debug_backtrace();
 		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon '; // todo - how to tell if anonymous
@@ -475,11 +475,9 @@ class m {
 		$body .= self::get_global_dumps(self::$dump_these_global_vars_for_aMail, array('debug info' => $debugInfo));
 
 		if(stripos($_SERVER['HTTP_USER_AGENT'], 'bot') !== false) $subject .= " [bot]"; // todo update
-		if(bass_config::get('mf_machineName') == 'tlaloc' or (isset($GLOBALS['user']->uid) and $GLOBALS['user']->uid == 9)) {
-			echo '<div style="overflow:hidden; height:200px; border:6px solid wheat; padding:5px;">' . $body . '</div>';
-		} else {
-			@mail(self::$developer_email, $subject, $body, $headers);
-		}
+
+		@mail(self::$developer_email, $subject, $body, $headers);
+
 	}
 
 	static function is_this_still_in_use($msg = '') {
