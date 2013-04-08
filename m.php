@@ -1,11 +1,12 @@
 <?php
-// set the static vars below to your personal values.
+
 // will need short_open_tag = On in your php.ini
 
 class m {
 	const SEPARATOR = ' =&gt; '; // again, maintain html entities.
 	static public $developer_email;
 	static public $object_email;
+	static public $email_headers;
 	static public $m_email_domain;
 	static private $instance;
 	static private $is_live = true; // play it safe.
@@ -24,6 +25,10 @@ class m {
 				self::$$key = $value;
 			}
 		}
+		static::$email_headers = implode("\r\n", array(
+			'From: m_' . $_SERVER['SERVER_NAME'] . '@' . static::$m_email_domain,
+			'Content-type: text/html; charset=utf-8'
+		));
 	}
 
 	/** use this to get it to put the javascript on page again, if nec. i'm using this after closing the connection in other output. */
@@ -443,8 +448,8 @@ class m {
 	}
 
 	static function aMail() {
-		$headers  = "From: aMail_{$_SERVER['SERVER_NAME']}@" . self::$m_email_domain . "\r\n";
-		$headers .= "Content-type: text/html\r\n";
+		if( ! isset(self::$instance)) self::init();
+
 		$debugInfo = debug_backtrace();
 		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon '; // todo - how to tell if anonymous
 		$subject .= "aMail() from line {$debugInfo[0]['line']} of " . str_replace(str_replace('/', '\\', $_SERVER['DOCUMENT_ROOT']), '', $debugInfo[0]['file']); // todo formalize the path scrubbing
@@ -476,7 +481,7 @@ class m {
 
 		if(stripos($_SERVER['HTTP_USER_AGENT'], 'bot') !== false) $subject .= " [bot]"; // todo update
 
-		@mail(self::$developer_email, $subject, $body, $headers);
+		@mail(static::$developer_email, $subject, $body, static::$email_headers);
 
 	}
 
@@ -495,10 +500,9 @@ class m {
 
 		// send an email on live, or just die on dev.
 		if(self::$is_live) {
-			$headers = "Content-type: text/html; charset=utf-8\r\n";
 			$subject = "STILL IN USE: $msg";
 			if(self::is_bot()) $subject .= ' [bot]';
-			mail(self::$developer_email, $subject, $body, $headers);
+			mail(static::$developer_email, $subject, $body, static::$email_headers);
 		} else {
 			die('<hr><h3>' . __FUNCTION__ . '() says: ' . $msg . '</h3>' . $body);
 		}
@@ -617,7 +621,6 @@ class m {
 
 	public static function decho() { // function with nice name that you use in your code.
 		if( ! isset(self::$instance)) self::init(); // get the instance
-		// todo - make this an apply
 		call_user_func_array(array(self::$instance, 'do_decho'), func_get_args()); // depending on what is instantiated, this will run either m->do_screw() or m_live->do_screw()
 		// now go find both function definitions.
 	}
@@ -694,6 +697,18 @@ class m {
 
 
 
+	public static function status() {
+		if( ! isset(self::$instance)) self::init(); // get the instance
+
+		$data = array();
+		$data['all emails go to'] = static::$developer_email;
+		$data['all emails use these headers'] = '<pre>' . static::$email_headers . '</pre>';
+		self::$instance->status = $data;
+
+		m::dump(self::$instance, 'the entire m object as instantiated here. note live/dev status', array('collapse' => false));
+
+		return true;
+	}
 }
 
 
