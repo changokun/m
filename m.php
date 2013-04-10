@@ -488,8 +488,8 @@ class m {
 		foreach($args as $arg) { // then the more complex things.
 			if( ! is_scalar($arg)) {
 				ob_start();
-				var_dump($arg);
-				$body .= "<pre style='font-size:12px; font-family:Arial'>" . ob_get_clean() . "</pre>";
+				static::dump_dev($arg);
+				$body .= ob_get_clean();
 			}
 		}
 
@@ -639,6 +639,38 @@ class m {
 	}
 
 	protected static function get_global_dumps($var_names, $additional_data = array()) {
+		// additional data is an assoc array (label, data) that is more things to be dumped in the same styles
+		ob_start();
+
+		foreach($additional_data as $label => $data) {
+			static::dump_dev($data, $label);
+		}
+
+		foreach($var_names as $var_name) {
+			switch($var_name) { // we do this this way because these globals are picky about refs or something.
+				case '_SERVER':
+					static::dump_dev($_SERVER, '$_SERVER');
+				break;
+				case '_REQUEST':
+					static::dump_dev($_REQUEST, '$_REQUEST');
+				break;
+				default:
+					// assumed to be a global
+					if(isset($GLOBALS[$var_name])) {
+						static::dump_dev($GLOBALS[$var_name], $GLOBALS[$var_name]);
+					} else {
+						echo "<p>\$GLOBALS['" . $var_name . "'] not found.</p>";
+					}
+				break;
+			}
+		}
+
+
+		$temp = ob_get_clean();
+		return $temp;
+	}
+
+		protected static function XXXget_global_dumps($var_names, $additional_data = array()) {
 		// additional data is an assoc array (label, data) that is more things to be dumped in the same styles
 		static $label_tag_name = 'h4';
 		ob_start();
