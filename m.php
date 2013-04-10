@@ -254,7 +254,7 @@ class m {
 					</div>
 				<? endforeach; ?>
 
-				<? if(get_class($dumpee) != 'stdClass') :
+				<? /* todo make optional if(get_class($dumpee) != 'stdClass') :
 					$methods = get_class_methods(get_class($dumpee)); ?>
 					<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
 						<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
@@ -262,7 +262,7 @@ class m {
 							<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
 						<? endforeach; echo '</ul>'; ?>
 					</div>
-				<? endif;
+				<? endif;*/
 			break;
 
 			case 'resource': ?>
@@ -503,7 +503,7 @@ class m {
 	}
 
 	public static function help_dev($area = 'general', $depth = 0) { // todo add tiny drumkit as an option
-		return (bool) ((isset($_REQUEST[$area . 'Help']) and $_REQUEST[$area . 'Help'] > $depth) or (isset($_SESSION[$area . 'Help']) and $_SESSION[$area . 'Help'] > $depth));
+		return (bool) ((isset($_REQUEST[$area . 'Help']) and $_REQUEST[$area . 'Help'] > $depth) or (isset($_SESSION[$area . 'HelpXXXXXXXXXXXXXXXXX']) and $_SESSION[$area . 'HelpXXXXXXXXXXX'] > $depth));
 	}
 
 	/*public static function help_live() { // todo - not needed, overload will return false, right?
