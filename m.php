@@ -394,6 +394,11 @@ class m {
 	}
 
 	public static function death_dev($dumpee, $label = NULL, $options = array()) {
+		// get a fresh backtrace
+		static::$debug_info = debug_backtrace();
+		array_shift(static::$debug_info); // get rid of myself.
+		array_shift(static::$debug_info); // get rid of __call(). // todo may need to selective ly cut these out
+
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
@@ -587,6 +592,9 @@ class m {
 	* @param int $relevant_backtrace_depth
 	*/
 	static function get_caller_fragment($stack_frame) {
+		if(empty($stack_frame)) {
+			 return ' &hellip; oh, god, i don&rsquo;t know. the stack frame you sent me was empty.';
+		}
 		$return = '';
 
 		// is there a class? temp disable, maybe screws up depth
