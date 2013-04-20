@@ -4,7 +4,7 @@
 
 class m {
 
-	const SEPARATOR = ' =&gt; '; // again, maintain html entities.
+	const SEPARATOR = ' =&gt; '; // maintain html entities.
 
 	public static $mode; // do not set a default - this is how we know if init has run or not.
 	public static $developer_email;
