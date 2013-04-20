@@ -8,7 +8,7 @@ class m {
 
 	public static $mode; // do not set a default - this is how we know if init has run or not.
 	public static $developer_email;
-	public static $m_email_domain;
+	public static $m_email_domain; // so that we can create our own email addresses
 	public static $email_headers;
 	protected static $dump_these_global_vars_for_still_in_use = array('_REQUEST', '_SERVER');
 	protected static $dump_these_global_vars_for_aMail = array('_REQUEST', '_SERVER');
