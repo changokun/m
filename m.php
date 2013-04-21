@@ -23,6 +23,13 @@ class m {
 	static private $javascript_has_been_output = false;
 	static private $debug_info;
 
+	// todo privatize constructor?
+	public function __construct() {
+		if( ! isset(static::$mode)) static::init();
+		if(static::$mode != 'live') static::death('oh no, don&rsquo;t try to instantiate me, that is silly.');
+	}
+
+
 	private static function init() {
 		// set the mode. it is like these words: live, dev, report and they indicate if a civilian could be observing output, or if a dev is.
 
@@ -74,11 +81,6 @@ class m {
 
 		// for now, output to screen
 		echo '<p>unknown m method: ' . $name . ', please stand by.</p>';
-	}
-
-	public function __construct() {
-		if( ! isset(static::$mode)) static::init();
-		if(static::$mode != 'live') static::death('oh no, don&rsquo;t try to instantiate me, that is silly.');
 	}
 
 	public static function dump_live($dumpee, $label = 'no label provided', $options = array()) {
