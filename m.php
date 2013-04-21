@@ -4,12 +4,12 @@
 
 class m {
 
-	const SEPARATOR = ' =&gt; '; // again, maintain html entities.
+	const SEPARATOR = ' =&gt; '; // maintain html entities.
 
 	public static $mode; // do not set a default - this is how we know if init has run or not.
 	public static $developer_email;
-	public static $m_email_domain;
-	public static $email_headers;
+	public static $m_email_domain; // so that we can create our own email addresses
+	public static $email_headers; // filled in on init so that we gots the html, from, etc.
 	protected static $dump_these_global_vars_for_still_in_use = array('_REQUEST', '_SERVER');
 	protected static $dump_these_global_vars_for_aMail = array('_REQUEST', '_SERVER');
 	protected static $classes_to_skip = array();
@@ -394,6 +394,11 @@ class m {
 	}
 
 	public static function death_dev($dumpee, $label = NULL, $options = array()) {
+		// get a fresh backtrace
+		static::$debug_info = debug_backtrace();
+		array_shift(static::$debug_info); // get rid of myself.
+		array_shift(static::$debug_info); // get rid of __call(). // todo may need to selective ly cut these out
+
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
@@ -587,6 +592,9 @@ class m {
 	* @param int $relevant_backtrace_depth
 	*/
 	static function get_caller_fragment($stack_frame) {
+		if(empty($stack_frame)) {
+			 return ' &hellip; oh, god, i don&rsquo;t know. the stack frame you sent me was empty.';
+		}
 		$return = '';
 
 		// is there a class? temp disable, maybe screws up depth
