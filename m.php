@@ -99,8 +99,11 @@ class m {
 
 		// get a fresh backtrace
 		static::$debug_info = debug_backtrace();
-		array_shift(static::$debug_info); // get rid of myself.
-		array_shift(static::$debug_info); // get rid of __call(). // todo may need to selective ly cut these out
+
+		// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
+		while(count(static::$debug_info) and (substr(static::$debug_info[0]['function'], 0, 4) != 'dump' or ! isset(static::$debug_info[0]['file']))) {
+			array_shift(static::$debug_info); // lose one
+		}
 
 		if(is_scalar($label)) $label = array($label);
 		if(empty($label)) $label = array(static::$default_dump_label);
