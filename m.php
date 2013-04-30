@@ -115,7 +115,7 @@ class m {
 		// set the founder string. it is what shows up at the bottom, telling you where in the code to go
 		if( ! isset($options['founder'])) {
 			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on '; // keep the html entity. many times dumps occur on headless pages
-			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment(static::$debug_info[$options['relevant_backtrace_depth'] + 1]);
+			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment(static::$debug_info[$options['relevant_backtrace_depth']]);
 		}
 
 		$data_type = gettype($dumpee);
