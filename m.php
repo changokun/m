@@ -13,7 +13,7 @@ class m {
 	protected static $dump_these_global_vars_for_still_in_use = array('_REQUEST', '_SERVER');
 	protected static $dump_these_global_vars_for_aMail = array('_REQUEST', '_SERVER');
 	protected static $classes_to_skip = array();
-	static $sensitive_folders = array(); // will attempt to scrub these from output
+	static $sensitive_folders; // will attempt to scrub these from output
 	static public $jQuery_src_url = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
 	public static $side_dish; // collects dechoes
 
@@ -49,6 +49,19 @@ class m {
 			'From: m_' . $_SERVER['SERVER_NAME'] . '@' . static::$m_email_domain,
 			'Content-type: text/html; charset=utf-8'
 		));
+
+		// make sure sensitive folders includes doc root
+		if(empty(self::$sensitive_folders)) {
+			self::$sensitive_folders = array();
+		} elseif(is_scalar(self::$sensitive_folders)) {
+			self::$sensitive_folders = array(self::$sensitive_folders);
+		} elseif( ! is_array(self::$sensitive_folders)) {
+			throw new Exception('bad sensitive folder config. i want an array!');
+		}
+		self::$sensitive_folders[] = $_SERVER['DOCUMENT_ROOT'];
+		// and let's go ahead and make all the slashes more flexible: /
+		foreach(self::$sensitive_folders as $key => $folder) self::$sensitive_folders[$key] = str_replace('\\', '/', $folder);
+
 
 		// todo check request vars for instructions to turn on/ help - and to persist it in session.
 
@@ -98,11 +111,12 @@ class m {
 		if( ! isset(static::$mode)) static::init();
 
 		// get a fresh backtrace
-		static::$debug_info = debug_backtrace();
-
-		// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
-		while(count(static::$debug_info) and (substr(static::$debug_info[0]['function'], 0, 4) != 'dump' or ! isset(static::$debug_info[0]['file']))) {
-			array_shift(static::$debug_info); // lose one
+		if( ! isset($options['backtrace'])) {
+			$options['backtrace'] = debug_backtrace();
+			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
+			while(count($options['backtrace']) and (substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
+				array_shift($options['backtrace']); // lose one
+			}
 		}
 
 		if(is_scalar($label)) $label = array($label);
@@ -113,12 +127,10 @@ class m {
 		// collapse? expand?
 		$options['collapse'] = isset($options['collapse']) ? $options['collapse'] : true;
 
-		if( ! isset($options['relevant_backtrace_depth'])) $options['relevant_backtrace_depth'] = 0;
-
 		// set the founder string. it is what shows up at the bottom, telling you where in the code to go
 		if( ! isset($options['founder'])) {
 			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on '; // keep the html entity. many times dumps occur on headless pages
-			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment(static::$debug_info[$options['relevant_backtrace_depth']]);
+			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['backtrace'][0]);
 		}
 
 		$data_type = gettype($dumpee);
@@ -173,7 +185,7 @@ class m {
 <div class="mDump" style="border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0;">
 	<? if($label) : ?><div class = "mDump_label" style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px;"><?=implode(' | ', $label)?></div><? endif; ?>
 	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=static::_dump($dumpee, -1)?></div><? endif; ?>
-	<div class="mDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px;"><?=$options['founder']?></div>
+	<div class="mDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; letter-spacing:2"><?=$options['founder']?></div>
 </div>
 
 <?
@@ -400,6 +412,15 @@ class m {
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
+		// get a fresh backtrace
+		if( ! isset($options['backtrace'])) {
+			$options['backtrace'] = debug_backtrace();
+			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
+			while(count($options['backtrace']) and (substr($options['backtrace'][0]['function'], 0, 5) != 'death' or ! isset($options['backtrace'][0]['file']))) {
+				array_shift($options['backtrace']); // lose one
+			}
+		}
+
 		if(is_scalar($label)) $label = array($label);
 		if(empty($label)) $label = array(static::$default_death_label);
 
@@ -410,11 +431,9 @@ class m {
 		// collapse? expand?
 		$options['collapse'] = isset($options['collapse']) ? $options['collapse'] : false;
 
-		if( ! isset($options['relevant_backtrace_depth'])) $options['relevant_backtrace_depth'] = 0;
-
 		// set the founder string. it is what shows up at the bottom, telling you where in the code to go
 		if( ! isset($options['founder'])) {
-			$options['founder'] = 'Cause of death on ' . self::get_caller_fragment(static::$debug_info[$options['relevant_backtrace_depth'] + 1]);
+			$options['founder'] = 'Cause of death on ' . self::get_caller_fragment($options['backtrace'][0]);
 		}
 
 		static::dump_dev($dumpee, $label, $options);
@@ -591,7 +610,7 @@ class m {
 	*/
 	static function get_caller_fragment($stack_frame) {
 		$return = '';
-
+var_dump($stack_frame);
 		// is there a class? temp disable, maybe screws up depth
 		// $class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[++$relevant_backtrace_depth]['class'] . '::' : '';
 
@@ -604,11 +623,8 @@ class m {
 		}
 
 		// clean up slashes, remove core dir info
-		$return = str_replace($_SERVER['DOCUMENT_ROOT'], '', str_replace('/', '\\', $return));
-		// clean up more core info that doc root doesn't cover - because sometime your libs will use this and they aren't in doc root.
-		foreach(self::$sensitive_folders as $folder) $return = str_replace(str_replace('/', '\\', $folder), '', str_replace('/', '\\', $return));
-
-		// temp disable. not my fave. if(isset($debug_info[$relevant_backtrace_depth+1]['function'])) $return .= '<span style="color:#888"> in ' . $class . $debug_info[$relevant_backtrace_depth+1]['function'] . '()</span>';
+		$return = str_replace('\\', '/', $return); // so that we always use forward slashes
+		foreach(self::$sensitive_folders as $folder) $return = str_replace($folder, '', $return);
 
 		return $return;
 	}
