@@ -610,7 +610,6 @@ class m {
 	*/
 	static function get_caller_fragment($stack_frame) {
 		$return = '';
-var_dump($stack_frame);
 		// is there a class? temp disable, maybe screws up depth
 		// $class = isset($debug_info[$relevant_backtrace_depth + 1]['class']) ? $debug_info[++$relevant_backtrace_depth]['class'] . '::' : '';
 
