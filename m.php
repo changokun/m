@@ -110,8 +110,8 @@ class m {
 	public static function dump_dev($dumpee, $label = NULL, $options = array()) {
 		if( ! isset(static::$mode)) static::init();
 
-		// get a fresh backtrace
 		if( ! isset($options['backtrace'])) {
+			// get a fresh backtrace
 			$options['backtrace'] = debug_backtrace();
 			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
 			while(count($options['backtrace']) and (substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
