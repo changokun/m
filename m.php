@@ -119,8 +119,13 @@ class m {
 			}
 		}
 
-		if(is_scalar($label)) $label = array($label);
-		if(empty($label)) $label = array(static::$default_dump_label);
+		if(empty($label)) {
+			$label = array(static::$default_dump_label);
+		} elseif(is_scalar($label)) {
+			$label = array($label);
+		} else {
+			$label = (array) $label; /// hmmmmm
+		}
 		//echo '<xmp>'; var_dump($label); echo '</xmp>';
 
 		// todo - union with default options
