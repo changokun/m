@@ -16,6 +16,8 @@ class m {
 	static $sensitive_folders; // will attempt to scrub these from output
 	static public $jQuery_src_url = 'http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js';
 	public static $side_dish; // collects dechoes
+	public static $is_bot; // see is_bot method.
+
 
 	public static $default_dump_label = 'No label provided'; // this can be set in config
 	public static $default_death_label = 'Death rattle'; // this can be set in config
@@ -727,7 +729,20 @@ class m {
 	}
 
 	public static function is_bot() {
-		return false; // todo
+		if(isset(self::$is_bot)) return self::$is_bot;
+		// this is a very simple detection. if you already know whether your requestor is a bot, tell m so that m doesn't check: m::$is_bot = true/false;
+		self::$is_bot = false;
+		if(empty($_SERVER['HTTP_USER_AGENT'])) {
+			self::$is_bot = true;
+		} else {
+			foreach(array('bot', 'msn', 'google', 'slurp', 'jeeves', 'spider', 'yandex') as $bot_name) {
+				if(stripos($_SERVER['HTTP_USER_AGENT'], $bot_name) !== false) {
+					self::$is_bot = true;
+					break;
+				}
+			}
+		}
+		return self::$is_bot;
 	}
 
 	public static function status() {
