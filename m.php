@@ -115,7 +115,7 @@ class m {
 			// get a fresh backtrace
 			$options['backtrace'] = debug_backtrace();
 			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
-			while(count($options['backtrace']) and (substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
+			while(count($options['backtrace']) and ( ! isset($options['backtrace'][0]['function']) or substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
 				array_shift($options['backtrace']); // lose one
 			}
 		}
@@ -422,7 +422,7 @@ class m {
 		return ob_get_clean();
 	}
 
-	public static function death_dev($dumpee, $label = NULL, $options = array()) {
+	public static function death_dev($dumpee = NULL, $label = NULL, $options = array()) {
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
@@ -457,7 +457,7 @@ class m {
 
 	}
 
-	public static function death_live($dumpee, $label = NULL, $options = array()) {
+	public static function death_live($dumpee = NULL, $label = NULL, $options = array()) {
 		// so, you left a death in your code. does that mean processing should stop? on live?
 		// let's make that configgable todo
 		// if it is a bad thng: 		throw new Exception('Sorry, we have an issue handling your request.');
