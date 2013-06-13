@@ -112,17 +112,27 @@ class m {
 	public static function dump_dev($dumpee, $label = NULL, $options = array()) {
 		if( ! isset(static::$mode)) static::init();
 
+		// we want a stack frame (or array of them) - did we get one? if not, we'll get oour own, and you can give hints as to how deep to go
 		if(isset($options['stack_frame'])) {
 			$stack_frame = $options['stack_frame'];
 		} else {
 			// get a fresh backtrace
-			$debug_info = debug_backtrace();
-			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
-			foreach($debug_info as $potential_stack_frame) {
-				if(substr($potential_stack_frame['function'], 0, 4) == 'dump' and isset($potential_stack_frame['file'])) {
-					$stack_frame = $potential_stack_frame;
+			if(empty($options['backtrace'])) {
+				$options['backtrace'] = debug_backtrace(); // get a fresh backtrace
+				// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
+				while(count($options['backtrace']) and ( ! isset($options['backtrace'][0]['function']) or substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
+					array_shift($options['backtrace']); // lose one
+				}
+				// if your dump call is nested inside a more important function, add backtrace_additional_depth // todo test
+				if(isset($options['backtrace_additional_depth']) and is_numeric($options['backtrace_additional_depth'])) {
+					$temp = (int) $options['backtrace_additional_depth'];
+					while($temp) {
+						array_shift($options['backtrace']); // lose one
+						$temp --;
+					}
 				}
 			}
+			$stack_frame = $options['backtrace'][0];
 		}
 
 		if(empty($label)) {
@@ -424,7 +434,7 @@ class m {
 		return ob_get_clean();
 	}
 
-	public static function death_dev($dumpee, $label = NULL, $options = array()) {
+	public static function death_dev($dumpee = NULL, $label = NULL, $options = array()) {
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
@@ -459,7 +469,7 @@ class m {
 
 	}
 
-	public static function death_live($dumpee, $label = NULL, $options = array()) {
+	public static function death_live($dumpee = NULL, $label = NULL, $options = array()) {
 		// so, you left a death in your code. does that mean processing should stop? on live?
 		// let's make that configgable todo
 		// if it is a bad thng: 		throw new Exception('Sorry, we have an issue handling your request.');
