@@ -111,21 +111,25 @@ class m {
 	*/
 	public static function dump_dev($dumpee, $label = NULL, $options = array()) {
 		if( ! isset(static::$mode)) static::init();
-		if( ! isset($options['backtrace'])) {
-			// get a fresh backtrace
-			$options['backtrace'] = debug_backtrace();
+
+		// we want a stack frame (or array of them) - did we get one? if not, we'll get oour own, and you can give hints as to how deep to go
+		if(isset($options['stack_frame'])) {
+			$stack_frame = $options['stack_frame'];
+		} else {
+			if(empty($options['backtrace'])) $options['backtrace'] = debug_backtrace(); // get a fresh backtrace
 			// remove myself - look for my name with a file.... the __calStatic doesn't report a file name on my frame.
 			while(count($options['backtrace']) and ( ! isset($options['backtrace'][0]['function']) or substr($options['backtrace'][0]['function'], 0, 4) != 'dump' or ! isset($options['backtrace'][0]['file']))) {
 				array_shift($options['backtrace']); // lose one
 			}
-		}
-		// if your dump call is nested inside a more important function, add backtrace_additional_depth // todo test
-		if(isset($options['backtrace_additional_depth']) and is_numeric($options['backtrace_additional_depth'])) {
-			$temp = (int) $options['backtrace_additional_depth'];
-			while($temp) {
-				array_shift($options['backtrace']); // lose one
-				$temp --;
+			// if your dump call is nested inside a more important function, add backtrace_additional_depth // todo test
+			if(isset($options['backtrace_additional_depth']) and is_numeric($options['backtrace_additional_depth'])) {
+				$temp = (int) $options['backtrace_additional_depth'];
+				while($temp) {
+					array_shift($options['backtrace']); // lose one
+					$temp --;
+				}
 			}
+			$stack_frame = $options['backtrace'][0];
 		}
 
 		if(empty($label)) {
@@ -144,7 +148,7 @@ class m {
 		// set the founder string. it is what shows up at the bottom, telling you where in the code to go
 		if( ! isset($options['founder'])) {
 			if( ! isset($options['founder_verb'])) $options['founder_verb'] = 'm::dump&rsquo;d on '; // keep the html entity. many times dumps occur on headless pages
-			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($options['backtrace'][0]);
+			$options['founder'] = $options['founder_verb'] . self::get_caller_fragment($stack_frame);
 		}
 
 		$data_type = gettype($dumpee);
@@ -158,11 +162,6 @@ class m {
 				array_unshift($label, $dumpee ? '<span class="boolean_true_value">true</span>' : '<span class="boolean_false_value">false</span>');
 			break;
 			case 'object':
-				if($label[0] == static::$default_dump_label) {
-					// these are some special classes.
-					if($dumpee instanceof bass_account) $label[0] = $dumpee->name;
-					if($dumpee instanceof bass_user) $label[0] .= ' (current user)';
-				}
 				$label[] = $data_type;
 				$label[] = get_class($dumpee);
 			break;
@@ -265,33 +264,43 @@ class m {
 			break;
 
 			case 'object':
-				$keys = array();
-				$missive = false;
-				foreach($dumpee as $key => $value) {
-					if($key == 'missive') {
-						$missive = true;
-					} else {
+
+				if($dumpee instanceof xyz) { // special class treatment
+
+				} elseif(method_exists($dumpee, '_dump')) { // dumpee has special method for showing off.
+					?><div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
+						</div><?
+
+				} else { // normal object stuff, please
+					// make a list of keys
+					$keys = array();
+					foreach($dumpee as $key => $value) {
 						$keys[] = $key;
 					}
+					asort($keys); // todo make configurable
+
+					echo get_class($dumpee) . ' object';
+
+					if($depth) { // no twistee if no depth
+						echo '<span class="mDump_depth_twistee_control"></span>';
+					}
+
+					foreach($keys as $key) : ?>
+						<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
+						</div>
+					<? endforeach; ?>
+
+					<? /* todo make optional if(get_class($dumpee) != 'stdClass') :
+						$methods = get_class_methods(get_class($dumpee)); ?>
+						<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
+							<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
+								foreach($methods as $method_name): ?>
+								<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
+							<? endforeach; echo '</ul>'; ?>
+						</div>
+					<? endif;*/
 				}
-				asort($keys);
-				if($missive) array_push($keys, 'missive');
 
-				if($depth):?><?=get_class($dumpee)?> object<span class="mDump_depth_twistee_control"></span><?endif;?>
-				<? foreach($keys as $key) : ?>
-					<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
-					</div>
-				<? endforeach; ?>
-
-				<? /* todo make optional if(get_class($dumpee) != 'stdClass') :
-					$methods = get_class_methods(get_class($dumpee)); ?>
-					<div style="background-color:wheat; color:#333; font-weight:bold; font-size:16px; padding:5px;"><?=count($methods) ? number_format(count($methods)) . ' method' . (count($methods) != 1 ? 's' : '') : 'no methods'?><span class='mDump_twistee_control'></span>
-						<? if(count($methods)) echo '<ul style="margin:0; padding:0; display:none;" class="mDump_twistee_zone">';
-							foreach($methods as $method_name): ?>
-							<li style="list-style-type:none; padding-left:10px; font-weight:normal; font-size:13px;" title="<?=get_class($dumpee)?>::<?=$method_name?>"><?=$method_name?></li>
-						<? endforeach; echo '</ul>'; ?>
-					</div>
-				<? endif;*/
 			break;
 
 			case 'resource': ?>
@@ -556,7 +565,7 @@ class m {
 	}
 
 
-	public static function decho_dev() { // function with nice name that you use in your code.
+	public static function decho_dev() {
 		$args = func_get_args();
 
 		// pull out some behavior keywords
@@ -573,21 +582,30 @@ class m {
 			}
 		}
 
+		$debug_info = debug_backtrace();
+		// we want the frame where the function is 'decho'
+		foreach($debug_info as $potential_stack_frame) {
+			if($potential_stack_frame['function'] == 'decho') {
+				$stack_frame =$potential_stack_frame;
+				break;
+			}
+		}
+
 		ob_start();
 
 		if(count($args) == 1 and is_scalar($args[0])) {
 			// output simple string
-			echo static::get_scalar_decho_HTML($args[0]);
+			echo static::get_scalar_decho_HTML($args[0], $stack_frame);
 		} elseif(count($args) == 2 and is_scalar($args[1])) {
 			// same as a dump - dumpee and label have been provided.
-			static::dump($args[0], $args[1], array('relevant_backtrace_depth' => 3));
+			static::dump_dev($args[0], $args[1], array('relevant_backtrace_depth' => 3));
 		} else {
 			$all_scalar = true; // we'll see about that!
 			foreach($args as $arg) if( ! is_scalar($arg)) $all_scalar = false;
 			if($all_scalar) {
-				foreach($args as $arg) echo static::get_scalar_decho_HTML($arg);
+				foreach($args as $arg) echo static::get_scalar_decho_HTML($arg, $stack_frame);
 			} else {
-				foreach($args as $arg) static::dump($arg, 'decho', array('relevant_backtrace_depth' => 3));
+				foreach($args as $arg) static::dump_dev($arg, 'decho', array('relevant_backtrace_depth' => 3));
 			}
 		}
 
@@ -608,8 +626,8 @@ class m {
 		// this is the dev version of the function. do what ever you want.
 	}
 
-	protected static function get_scalar_decho_HTML($str) {
-		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags(static::get_caller_fragment(static::$debug_info[3])) . '">' . $str . '</div>';
+	protected static function get_scalar_decho_HTML($str, $stack_frame) {
+		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags(static::get_caller_fragment($stack_frame)) . '">' . $str . '</div>';
 	}
 
 
