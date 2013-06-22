@@ -1,4 +1,6 @@
 <?php
+// test
+
 // will need short_open_tag = On in your php.ini
 // also, copy rename sample.ini to m.ini, and set the values inside it.
 
