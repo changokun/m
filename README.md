@@ -4,8 +4,10 @@ m
 m is a PHP class that has tools for dumping and reporting.
 They are a little gruff, but they are smart about being called on a dev machine vs a live-production server.
 At first the behavior was different in case a dump was left in code that made it to the production server.
-Later I realized that I wanted different behavior as well.
+Later I realized that I could add more complex options as well.
 The other key feature that I started with was that the dump told you where in the code it came from, so that it could be removed easily.
+
+There is a working demo at <href="http://sarumino.com/m">sarumino.com</a>.
 
 If you are on my team, there is a 'dev' branch - please use it on your local dev boxes. I'll be implementing it soon on our staging servers.
 
