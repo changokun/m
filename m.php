@@ -34,26 +34,28 @@ class m {
 	}
 
 
-	private static function init() {
+	private static function init($options = array()) {
 		// set the mode. it is like these words: live, dev, report and they indicate if a civilian could be observing output, or if a dev is.
 
 		// default to live
 		self::$mode = 'live';
 
-		// todo make this more flexible as to how it is defined.
-		if(isset($_SERVER['site_is_dev']) and $_SERVER['site_is_dev']) self::$mode = 'dev';
-
-		// load config
+		// load config (optional)
 		if(file_exists(dirname(__FILE__) . '/m.ini')) {
 			foreach(parse_ini_file('m.ini', true) as $key => $value) {
 				self::$$key = $value;
 			}
 		}
 
+		// load passed in options
+		foreach($options as $key => $value) {
+			self::$$key = $value;
+		}
+
 		// did we get an email domain name?
 		if(empty(static::$m_email_domain)) {
 			// todo petty warning?
-			echo '<p>config lacks m_email_domain</p>';
+			trigger_error('m lacks m_email_domain');
 			static::$m_email_domain = 'misconfiguredm.com';
 		}
 		static::$email_headers = implode("\r\n", array(
