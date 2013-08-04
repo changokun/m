@@ -268,18 +268,20 @@ class m {
 
 			case 'object':
 
-				if($dumpee instanceof xyz) { // special class treatment
+				if($dumpee instanceof XXXmysqli_result) { // special class treatment
+					var_dump($dumpee);
+					$keys = array_keys(get_object_vars($dumpee));
+					var_dump($keys);
+					die('<hr>' . @$something . '<br>Died on line ' . __LINE__ . ' of ' . __FILE__);
 
 				} elseif(method_exists($dumpee, '_dump')) { // dumpee has special method for showing off.
 					?><div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
 						</div><?
 
 				} else { // normal object stuff, please
+
 					// make a list of keys
-					$keys = array();
-					foreach($dumpee as $key => $value) {
-						$keys[] = $key;
-					}
+					$keys = array_keys(get_object_vars($dumpee));
 					asort($keys); // todo make configurable
 
 					echo get_class($dumpee) . ' object';
@@ -289,7 +291,7 @@ class m {
 					}
 
 					foreach($keys as $key) : ?>
-						<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
+						<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><? if(isset($dumpee->$key)) { self::_dump($dumpee->$key, $depth, $key); } else { echo '<span class="mDump_meta_info">undefined</span>'; } ?>
 						</div>
 					<? endforeach; ?>
 
