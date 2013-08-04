@@ -53,13 +53,13 @@ class m {
 		}
 
 		// did we get an email domain name?
-		if(empty(static::$m_email_domain)) {
+		if(empty(self::$m_email_domain)) {
 			// todo petty warning?
 			trigger_error('m lacks m_email_domain');
-			static::$m_email_domain = 'misconfiguredm.com';
+			self::$m_email_domain = 'misconfiguredm.com';
 		}
-		static::$email_headers = implode("\r\n", array(
-			'From: m_' . $_SERVER['SERVER_NAME'] . '@' . static::$m_email_domain,
+		self::$email_headers = implode("\r\n", array(
+			'From: m_' . $_SERVER['SERVER_NAME'] . '@' . self::$m_email_domain,
 			'Content-type: text/html; charset=utf-8'
 		));
 
@@ -83,16 +83,16 @@ class m {
 	public static function __callStatic($name, $args) {
 		// the method named $name was not found.
 		// make sure we have been initialized
-		if( ! isset(static::$mode)) static::init();
+		if( ! isset(self::$mode)) self::init();
 
 		// try to look for the function with the mode appended.
-		$potential_method_name = $name . '_' . static::$mode;
+		$potential_method_name = $name . '_' . self::$mode;
 		if(method_exists(get_called_class(), $potential_method_name)) {
 			return forward_static_call_array(array('static', $potential_method_name), $args);
 		}
 
 		// if mode isn't live, we're basically done.
-		if(static::$mode == 'live') return false; // this will deny helps, dechoes, etc.
+		if(self::$mode == 'live') return false; // this will deny helps, dechoes, etc.
 
 		// todo - i'm cascading from dev to live, but that doesn' tmake sense when you need report or whatever.
 
@@ -116,7 +116,7 @@ class m {
 	* @param array $options
 	*/
 	public static function dump_dev($dumpee, $label = NULL, $options = array()) {
-		if( ! isset(static::$mode)) static::init();
+		if( ! isset(self::$mode)) self::init();
 
 		// we want a stack frame (or array of them) - did we get one? if not, we'll get oour own, and you can give hints as to how deep to go
 		if(isset($options['stack_frame'])) {
@@ -142,7 +142,7 @@ class m {
 		}
 
 		if(empty($label)) {
-			$label = array(static::$default_dump_label);
+			$label = array(self::$default_dump_label);
 		} elseif(is_scalar($label)) {
 			$label = array($label);
 		} else {
@@ -206,12 +206,12 @@ class m {
 
 <div class="mDump" style="border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0;">
 	<? if($label) : ?><div class = "mDump_label" style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px;"><?=implode(' | ', $label)?></div><? endif; ?>
-	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=static::_dump($dumpee, -1)?></div><? endif; ?>
+	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1)?></div><? endif; ?>
 	<div class="mDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; letter-spacing:2"><?=$options['founder']?></div>
 </div>
 
 <?
-		echo static::get_asset_html();
+		echo self::get_asset_html();
 
 	}
 
@@ -265,7 +265,7 @@ class m {
 				} else {
 					?>array with <?=count($dumpee)?> item<?=count($dumpee) != 1 ? 's' : ''?><span class="mDump_depth_twistee_control"></span>
 					<? foreach($dumpee as $key => $value): ?>
-						<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>>
+						<div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>>
 							<span class="key"><?=$key?></span><?=self::SEPARATOR?><?= self::_dump($value, $depth, $key) ?>
 						</div>
 					<? endforeach;
@@ -277,7 +277,7 @@ class m {
 				if($dumpee instanceof xyz) { // special class treatment
 
 				} elseif(method_exists($dumpee, '_dump')) { // dumpee has special method for showing off.
-					?><div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
+					?><div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
 						</div><?
 
 				} else { // normal object stuff, please
@@ -295,7 +295,7 @@ class m {
 					}
 
 					foreach($keys as $key) : ?>
-						<div class='depth_<?=$depth?>' <?=static::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
+						<div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key"><?=$key?></span><?=self::SEPARATOR?><?=self::_dump($dumpee->$key, $depth, $key) ?>
 						</div>
 					<? endforeach; ?>
 
@@ -454,7 +454,7 @@ class m {
 		}
 
 		if(is_scalar($label)) $label = array($label);
-		if(empty($label)) $label = array(static::$default_death_label);
+		if(empty($label)) $label = array(self::$default_death_label);
 
 		// make the label red!
 		$label[0] = '<span style="color:crimson">' . $label[0] . '</span>';
@@ -468,7 +468,7 @@ class m {
 			$options['founder'] = 'Cause of death on ' . self::get_caller_fragment($options['backtrace'][0]);
 		}
 
-		static::dump_dev($dumpee, $label, $options);
+		self::dump_dev($dumpee, $label, $options);
 
 		// and then die.
 		die;
@@ -486,8 +486,8 @@ class m {
 	}
 
 	public static function get_HTML_output_dev() {
-		if(empty(static::$side_dish)) return NULL;
-		return static::$side_dish;
+		if(empty(self::$side_dish)) return NULL;
+		return self::$side_dish;
 	}
 
 	/*public static function get_HTML_output_live() {
@@ -495,10 +495,10 @@ class m {
 	}*/
 
 	public static function is_this_still_in_use($msg = '') { //m::is_this_still_in_use('old account password change code block'); // 2012 08 02 ab
-		if( ! isset(static::$mode)) static::init();
+		if( ! isset(self::$mode)) self::init();
 
 		// get fresh debug
-		static::$debug_info = debug_backtrace();
+		self::$debug_info = debug_backtrace();
 
 		// send an email on live, or just die on dev.
 		if(self::$mode == 'live') {
@@ -509,17 +509,17 @@ class m {
 			}
 
 			// get caller info and append to msg.
-			$msg .= ' | complained ' . self::get_caller_fragment(static::$debug_info[1]);
+			$msg .= ' | complained ' . self::get_caller_fragment(self::$debug_info[1]);
 			$subject = "STILL IN USE: $msg";
 			if(self::is_bot()) $subject .= ' [bot]';
-			@mail(static::$developer_email, $subject, $body, static::$email_headers);
+			@mail(self::$developer_email, $subject, $body, self::$email_headers);
 		} else {
 			self::death('it is true.', 'STILL IN USE: ' . $msg, array('relevant_backtrace_depth' => 2));
 		}
 	}
 
 	public static function aMail() {
-		if( ! isset(static::$mode)) static::init();
+		if( ! isset(self::$mode)) self::init();
 
 		$debugInfo = debug_backtrace();
 		$subject = (isset($GLOBALS['user']) and $GLOBALS['user']->uid) ? '' : 'anon '; // todo - how to tell if anonymous
@@ -542,7 +542,7 @@ class m {
 		foreach($args as $arg) { // then the more complex things.
 			if( ! is_scalar($arg)) {
 				ob_start();
-				static::dump_dev($arg);
+				self::dump_dev($arg);
 				$body .= ob_get_clean();
 			}
 		}
@@ -552,7 +552,7 @@ class m {
 
 		if(self::is_bot()) $subject .= " [bot]";
 
-		@mail(static::$developer_email, $subject, $body, static::$email_headers);
+		@mail(self::$developer_email, $subject, $body, self::$email_headers);
 
 	}
 
@@ -604,17 +604,17 @@ class m {
 
 		if(count($args) == 1 and is_scalar($args[0])) {
 			// output simple string
-			echo static::get_scalar_decho_HTML($args[0], $stack_frame);
+			echo self::get_scalar_decho_HTML($args[0], $stack_frame);
 		} elseif(count($args) == 2 and is_scalar($args[1])) {
 			// same as a dump - dumpee and label have been provided.
-			static::dump_dev($args[0], $args[1], array('relevant_backtrace_depth' => 3));
+			self::dump_dev($args[0], $args[1], array('relevant_backtrace_depth' => 3));
 		} else {
 			$all_scalar = true; // we'll see about that!
 			foreach($args as $arg) if( ! is_scalar($arg)) $all_scalar = false;
 			if($all_scalar) {
-				foreach($args as $arg) echo static::get_scalar_decho_HTML($arg, $stack_frame);
+				foreach($args as $arg) echo self::get_scalar_decho_HTML($arg, $stack_frame);
 			} else {
-				foreach($args as $arg) static::dump_dev($arg, 'decho', array('relevant_backtrace_depth' => 3));
+				foreach($args as $arg) self::dump_dev($arg, 'decho', array('relevant_backtrace_depth' => 3));
 			}
 		}
 
@@ -623,11 +623,11 @@ class m {
 		// now, the big question... inline? or on the side?
 		// if it was not set by args. default to 'on the side' unless emergencyHelp is on.
 		// rather than call the help method and risk a loop, i'll do a manual check for emergency Help
-		if( ! isset($inline)) $inline = static::help('emergency');
+		if( ! isset($inline)) $inline = self::help('emergency');
 		if($inline) {
 			echo $output;
 		} else {
-			static::$side_dish .= $output;
+			self::$side_dish .= $output;
 		}
 
 		//m::dump($args, 'decho!!!', array('relevant_backtrace_depth' => 2));
@@ -636,7 +636,7 @@ class m {
 	}
 
 	protected static function get_scalar_decho_HTML($str, $stack_frame) {
-		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags(static::get_caller_fragment($stack_frame)) . '">' . $str . '</div>';
+		return '<div class="m_decho" style="background-color:wheat; color:#333; font-size:13px; padding:2px 3px; margin:2px; font-family:Arial" title="dechoed ' . strip_tags(self::get_caller_fragment($stack_frame)) . '">' . $str . '</div>';
 	}
 
 
@@ -705,21 +705,21 @@ class m {
 		ob_start();
 
 		foreach($additional_data as $label => $data) {
-			static::dump_dev($data, $label);
+			self::dump_dev($data, $label);
 		}
 
 		foreach($var_names as $var_name) {
 			switch($var_name) { // we do this this way because these globals are picky about refs or something.
 				case '_SERVER':
-					static::dump_dev($_SERVER, '$_SERVER');
+					self::dump_dev($_SERVER, '$_SERVER');
 				break;
 				case '_REQUEST':
-					static::dump_dev($_REQUEST, '$_REQUEST');
+					self::dump_dev($_REQUEST, '$_REQUEST');
 				break;
 				default:
 					// assumed to be a global
 					if(isset($GLOBALS[$var_name])) {
-						static::dump_dev($GLOBALS[$var_name], $GLOBALS[$var_name]);
+						self::dump_dev($GLOBALS[$var_name], $GLOBALS[$var_name]);
 					} else {
 						echo "<p>\$GLOBALS['" . $var_name . "'] not found.</p>";
 					}
@@ -786,8 +786,8 @@ class m {
 		if( ! isset(self::$mode)) self::init();
 
 		$data = array();
-		$data['all emails go to'] = static::$developer_email;
-		$data['all emails use these headers'] = '<pre>' . static::$email_headers . '</pre>';
+		$data['all emails go to'] = self::$developer_email;
+		$data['all emails use these headers'] = '<pre>' . self::$email_headers . '</pre>';
 
 		m::dump($data, 'm status', array('collapse' => false));
 
