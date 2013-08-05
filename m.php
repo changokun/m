@@ -51,6 +51,8 @@ class m {
 		foreach($options as $key => $value) {
 			self::$$key = $value;
 		}
+var_dump($options, debug_backtrace());
+		die('<hr>' . @self::$mode . '<br>Died on line ' . __LINE__ . ' of ' . __FILE__);
 
 		// did we get an email domain name?
 		if(empty(self::$m_email_domain)) {
