@@ -34,7 +34,7 @@ class m {
 	}
 
 
-	private static function init($options = array()) {
+	public static function init($options = array()) {
 		// set the mode. it is like these words: live, dev, report and they indicate if a civilian could be observing output, or if a dev is.
 
 		// default to live
