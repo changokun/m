@@ -7,7 +7,7 @@ At first the behavior was different in case a dump was left in code that made it
 Later I realized that I could add more complex options as well.
 The other key feature that I started with was that the dump told you where in the code it came from, so that it could be removed easily.
 
-There is a working demo at <a href="http://sarumino.com/m">sarumino.com</a>.
+There is a working demo at <a href="http://www.sarumino.com/m">sarumino.com</a>.
 
 If you are on my team, there is a 'dev' branch - please use it on your local dev boxes. I'll be implementing it soon on our staging servers.
 
