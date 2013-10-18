@@ -276,6 +276,9 @@ class m {
 
 				if($dumpee instanceof xyz) { // special class treatment
 
+				} elseif($dumpee instanceof mysqli_result) { ?>
+					<span class="mDump_meta_info">mysqli results can sorta be dumped, but let's face it, they can be trouble. consider writing some special handling.</span><?
+
 				} elseif(method_exists($dumpee, '_dump')) { // dumpee has special method for showing off.
 					?><div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
 						</div><?
