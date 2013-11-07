@@ -512,7 +512,9 @@ class m {
 			}
 
 			// get caller info and append to msg.
-			$msg .= ' | complained ' . self::get_caller_fragment(self::$debug_info[1]);
+			$msg .= ' | complained ' . self::get_caller_fragment(self::$debug_info[0]);
+			$msg .= ' | or was it ' . self::get_caller_fragment(self::$debug_info[1]);
+			$msg .= ' | or was it ' . self::get_caller_fragment(self::$debug_info[2]);
 			$subject = "STILL IN USE: $msg";
 			if(self::is_bot()) $subject .= ' [bot]';
 			@mail(self::$developer_email, $subject, $body, self::$email_headers);
