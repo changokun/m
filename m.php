@@ -512,7 +512,9 @@ class m {
 			}
 
 			// get caller info and append to msg.
-			$msg .= ' | complained ' . self::get_caller_fragment(self::$debug_info[1]);
+			$msg .= ' | complained ' . self::get_caller_fragment(self::$debug_info[0]);
+			$msg .= ' | or was it ' . self::get_caller_fragment(self::$debug_info[1]);
+			$msg .= ' | or was it ' . self::get_caller_fragment(self::$debug_info[2]);
 			$subject = "STILL IN USE: $msg";
 			if(self::is_bot()) $subject .= ' [bot]';
 			@mail(self::$developer_email, $subject, $body, self::$email_headers);
@@ -559,8 +561,21 @@ class m {
 
 	}
 
-	public static function help_dev($area = 'general', $depth = 0) { // todo add tiny drumkit as an option
-		return (bool) ((isset($_REQUEST[$area . 'Help']) and $_REQUEST[$area . 'Help'] > $depth) or (isset($_SESSION[$area . 'HelpXXXXXXXXXXXXXXXXX']) and $_SESSION[$area . 'HelpXXXXXXXXXXX'] > $depth));
+	public static function help_dev($areas = 'general', $depth = 0) {
+		// todo add tiny drumkit as an option
+		// todo add session stickiness
+		if($areas == 'any') {
+			// this means they want to show some debug if any of the Helps are asked for (any level).
+			foreach($_REQUEST as $key => $value) if(substr($key, -4, 4) == 'Help' and $value != 0) return true;
+			return false;
+		}
+		if(is_scalar($areas)) {
+			$areas = explode(',', $areas);
+		}
+		foreach($areas as $area) {
+			if(isset($_REQUEST[$area . 'Help']) and $_REQUEST[$area . 'Help'] > $depth) return true;
+		}
+		return false;
 	}
 
 	/*public static function help_live() { // todo - not needed, overload will return false, right?
