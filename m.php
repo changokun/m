@@ -115,7 +115,7 @@ class m {
 	* @param string $label
 	* @param array $options
 	*/
-	public static function dump_dev($dumpee, $label = NULL, $options = array()) {
+	public static function dump_dev($dumpee, $label = null, $options = array()) {
 		if( ! isset(self::$mode)) self::init();
 
 		// we want a stack frame (or array of them) - did we get one? if not, we'll get oour own, and you can give hints as to how deep to go
@@ -183,7 +183,7 @@ class m {
 		$done = false; // will cause the function to go into the subfunction
 		switch($data_type) {
 			case 'string':
-				$trim_length = 100;
+				$trim_length = 150;
 				if(strlen($dumpee) < $trim_length) $done = true;
 				array_unshift($label, substr($dumpee, 0, $trim_length) . (strlen($dumpee) > $trim_length ? '&nbsp;&hellip;' : ''));
 			break;
@@ -252,7 +252,7 @@ class m {
 
 			case 'string':
 				if(strlen($dumpee)):?>
-					<span class='string_value'><?=$dumpee?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 8) echo strlen($dumpee) . '-character ';?>string)</span></span>
+					<span class='string_value'><?=str_replace(array('<', '>'), array('&lt;', '&gt;'), $dumpee)?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 8) echo strlen($dumpee) . '-character ';?>string)</span></span>
 				<? else: ?>
 					<span class="mDump_meta_info"><span class="mDump_meta_info">(zero-length string)</span></span>
 				<? endif;
@@ -338,7 +338,7 @@ class m {
 	}
 
 	public static function get_asset_html() {
-		if(self::$javascript_has_been_output) return NULL; // only once, amigo
+		if(self::$javascript_has_been_output) return null; // only once, amigo
 		self::$javascript_has_been_output = true;
 		ob_start(); ?>
 <script type="text/javascript" src="<?=self::$jQuery_src_url?>"></script>
@@ -443,7 +443,7 @@ class m {
 		return ob_get_clean();
 	}
 
-	public static function death_dev($dumpee = NULL, $label = NULL, $options = array()) {
+	public static function death_dev($dumpee = null, $label = null, $options = array()) {
 		// get any decho output
 		if($temp = m::get_HTML_output()) echo '<div style="border:2px solid tan; padding:6px;">' . $temp . '</div>';
 
@@ -478,7 +478,7 @@ class m {
 
 	}
 
-	public static function death_live($dumpee = NULL, $label = NULL, $options = array()) {
+	public static function death_live($dumpee = null, $label = null, $options = array()) {
 		// so, you left a death in your code. does that mean processing should stop? on live?
 		// let's make that configgable todo
 		// if it is a bad thng: 		throw new Exception('Sorry, we have an issue handling your request.');
@@ -489,7 +489,7 @@ class m {
 	}
 
 	public static function get_HTML_output_dev() {
-		if(empty(self::$side_dish)) return NULL;
+		if(empty(self::$side_dish)) return null;
 		return self::$side_dish;
 	}
 
@@ -675,14 +675,14 @@ class m {
 		return $return;
 	}
 
-	static function omit_by_key($key = NULL, $data_is_scalar = true) {
+	static function omit_by_key($key = null, $data_is_scalar = true) {
 		if(empty($key)) return false;
 		if($key === 'GLOBALS') return $key . ' cannot be dumped; too much recursion.';
 		if($data_is_scalar and ($key === 'PHP_AUTH_PW' or stripos($key, 'pass') !== false)) return 'passwords are omitted from dumps';
 		return false;
 	}
 
-	static function omit_by_value($value = NULL) {
+	static function omit_by_value($value = null) {
 		if(empty($value)) return false;
 		if(is_object($value)) {
 			$class = get_class($value);
