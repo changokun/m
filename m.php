@@ -205,7 +205,7 @@ class m {
 	?>
 
 <div class="mDump" style="border: 2px solid olive; font-family: Arial; font-size: 13px; margin: 10px 0;">
-	<? if($label) : ?><div class = "mDump_label" style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px;"><?=implode(' | ', $label)?></div><? endif; ?>
+	<? if($label) : ?><div class = "mDump_label" style="font-size:16px; font-weight: bold; color:white; background-color:#333; padding:5px 5px 8px 5px;"><?=str_replace(array('»'), array('&raquo;'), implode(' | ', $label))?></div><? endif; ?>
 	<? if( ! $done) : ?><div class="collapseybull<?=$options['collapse'] ? ' collapseybull_on_init' : ''?>"><?=self::_dump($dumpee, -1)?></div><? endif; ?>
 	<div class="mDump_meta_info_main" style="font-size:11px; text-transform:uppercase; color: white; background-color: #333; padding:5px 5px 5px 5px; letter-spacing:2"><?=$options['founder']?></div>
 </div>
@@ -252,7 +252,7 @@ class m {
 
 			case 'string':
 				if(strlen($dumpee)):?>
-					<span class='string_value'><?=str_replace(array('<', '>'), array('&lt;', '&gt;'), $dumpee)?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 8) echo strlen($dumpee) . '-character ';?>string)</span></span>
+					<span class='string_value'><?=str_replace(array('<', '>', '»'), array('&lt;', '&gt;', '&raquo;'), $dumpee)?> <span class="mDump_meta_info">(<?if(strlen($dumpee) > 8) echo strlen($dumpee) . '-character ';?>string)</span></span>
 				<? else: ?>
 					<span class="mDump_meta_info"><span class="mDump_meta_info">(zero-length string)</span></span>
 				<? endif;
@@ -276,8 +276,13 @@ class m {
 
 				if($dumpee instanceof xyz) { // special class treatment
 
-				} elseif($dumpee instanceof mysqli_result) { ?>
+				} elseif($dumpee instanceof mysqli_result) {
+					?>
 					<span class="mDump_meta_info">mysqli results can sorta be dumped, but let's face it, they can be trouble. consider writing some special handling.</span><?
+
+				} elseif($dumpee instanceof Bass) {
+					?>
+					<span class="mDump_meta_info">Bass objects are just too damn large.</span><?
 
 				} elseif(method_exists($dumpee, '_dump')) { // dumpee has special method for showing off.
 					?><div class='depth_<?=$depth?>' <?=self::get_inline_style_tag_for_depth($depth)?>><span class="key">custom <?=get_class($dumpee)?>->_dump()</span><?=self::SEPARATOR?><?=self::_dump($dumpee->_dump(), $depth) ?>
@@ -291,7 +296,8 @@ class m {
 					}
 					asort($keys); // todo make configurable
 
-					echo get_class($dumpee) . ' object';
+					echo str_replace(array('»'), array('&raquo;'), get_class($dumpee)) . ' object';
+
 
 					if($depth) { // no twistee if no depth
 						echo '<span class="mDump_depth_twistee_control"></span>';
